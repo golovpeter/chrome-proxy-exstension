@@ -4,7 +4,14 @@ import { validateSettings } from '../src/core/validation';
 import { registerAuthHandler } from '../src/platform/auth';
 import type { ExtensionState, RuntimeMessage, RuntimeResponse } from '../src/platform/messages';
 import { applyProxySettings, checkConnection, clearProxySettings } from '../src/platform/proxy';
-import { clearCredentials, loadSettings, resetSettings, saveCredentials, saveSettings } from '../src/platform/storage';
+import {
+  clearCredentials,
+  loadSettings,
+  resetSettings,
+  saveCredentials,
+  saveSettings,
+  saveSettingsWithCredentials,
+} from '../src/platform/storage';
 
 export default defineBackground(() => {
   registerAuthHandler();
@@ -65,7 +72,7 @@ async function saveAndMaybeApply(settings: ProxySettings): Promise<ProxySettings
     throw new Error(validation.errors.map((error) => error.message).join(' '));
   }
 
-  await saveSettings(next);
+  await saveSettingsWithCredentials(next);
 
   await applyPersistedSettings();
 

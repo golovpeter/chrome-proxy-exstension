@@ -17,6 +17,10 @@ export async function saveSettings(settings: ProxySettings): Promise<void> {
   await storageSet({ [SETTINGS_KEY]: settingsWithoutCredentials });
 }
 
+export async function saveSettingsWithCredentials(settings: ProxySettings): Promise<void> {
+  await Promise.all([saveSettings(settings), saveCredentials(settings.credentials)]);
+}
+
 export async function resetSettings(): Promise<ProxySettings> {
   await storageSet({
     [SETTINGS_KEY]: {

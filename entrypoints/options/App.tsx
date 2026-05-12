@@ -52,7 +52,7 @@ export function App() {
 
     if (response.ok) {
       setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Настройки сохранены и применены.' });
+      setStatus({ tone: 'success', message: 'Настройки и credentials сохранены и применены.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
