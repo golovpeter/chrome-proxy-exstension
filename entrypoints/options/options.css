@@ -1,0 +1,288 @@
+:root {
+  color: #172033;
+  background: #f5f6f8;
+  font-family:
+    "Aptos",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 920px;
+  background: #f5f6f8;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  border-right: 1px solid #d9dee7;
+  background: #ffffff;
+  padding: 22px 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #cfd6e2;
+  border-radius: 8px;
+  background: #f0f3f7;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.brand strong,
+.brand small {
+  display: block;
+}
+
+.brand small {
+  margin-top: 2px;
+  color: #667085;
+}
+
+.sidebar nav {
+  display: grid;
+  gap: 6px;
+}
+
+.sidebar nav button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #465268;
+  cursor: pointer;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.sidebar nav button.active {
+  background: #eef2f7;
+  color: #101828;
+  font-weight: 650;
+}
+
+.content {
+  width: min(1120px, 100%);
+  padding: 28px;
+}
+
+.panel {
+  margin-top: 14px;
+  border: 1px solid #dce2eb;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 24px;
+}
+
+.section-header {
+  margin-bottom: 22px;
+}
+
+.section-header h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.section-header p {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: #667085;
+}
+
+.control-grid,
+.form-grid,
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.proxy-card {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 16px;
+  border: 1px solid #e3e8ef;
+  border-radius: 8px;
+  background: #fafbfc;
+  padding: 18px;
+}
+
+.proxy-card h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.proxy-card p,
+.info-grid p {
+  margin: 6px 0 0;
+  color: #667085;
+}
+
+.field,
+.segmented-field {
+  display: grid;
+  gap: 7px;
+}
+
+.field span,
+.segmented-field > span {
+  color: #344054;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid #cfd6e2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #101828;
+  padding: 10px 11px;
+  outline: none;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: #46627f;
+  box-shadow: 0 0 0 3px rgba(70, 98, 127, 0.12);
+}
+
+.field small {
+  color: #667085;
+}
+
+.field-error {
+  color: #b42318 !important;
+}
+
+.segmented-control {
+  display: flex;
+  width: fit-content;
+  border: 1px solid #cfd6e2;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 3px;
+}
+
+.segmented-control button {
+  min-width: 84px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #465268;
+  cursor: pointer;
+  padding: 8px 10px;
+}
+
+.segmented-control button[aria-pressed="true"] {
+  background: #24364b;
+  color: #ffffff;
+}
+
+.status-banner {
+  border: 1px solid #d7dfea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  padding: 12px 14px;
+}
+
+.status-success {
+  border-color: #b7dfc3;
+  background: #f2fbf5;
+  color: #176b35;
+}
+
+.status-error {
+  border-color: #f0b8b2;
+  background: #fff4f2;
+  color: #b42318;
+}
+
+.status-warning {
+  border-color: #ecd69c;
+  background: #fff9e8;
+  color: #7a5400;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.button {
+  min-height: 40px;
+  border: 1px solid #cfd6e2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  cursor: pointer;
+  padding: 9px 14px;
+  font-weight: 650;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.button-primary {
+  border-color: #24364b;
+  background: #24364b;
+  color: #ffffff;
+}
+
+.button-danger {
+  border-color: #d92d20;
+  color: #b42318;
+}
+
+.preview-box,
+.info-grid > div {
+  margin-top: 16px;
+  border: 1px solid #e3e8ef;
+  border-radius: 8px;
+  background: #fafbfc;
+  padding: 16px;
+}
+
+.preview-box code {
+  display: block;
+  margin-top: 8px;
+  white-space: normal;
+  word-break: break-word;
+}
