@@ -22,7 +22,7 @@
   </tr>
   <tr>
     <td><img src="docs/screenshots/popup.png" width="300" alt="Popup"></td>
-    <td><img src="docs/screenshots/options.png" width="600" alt="Options dashboard"></td>
+    <td><img src="docs/screenshots/dashboard.png" width="600" alt="Dashboard"></td>
   </tr>
 </table>
 
