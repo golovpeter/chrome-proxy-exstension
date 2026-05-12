@@ -1,0 +1,147 @@
+:root {
+  color: #172033;
+  background: #ffffff;
+  font-family:
+    "Aptos",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 340px;
+  margin: 0;
+  background: #ffffff;
+}
+
+button {
+  font: inherit;
+}
+
+.popup {
+  padding: 16px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.status {
+  width: fit-content;
+  margin: 8px 0 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.enabled {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.disabled {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.error {
+  background: #fff1f0;
+  color: #b42318;
+}
+
+.notice {
+  margin-bottom: 12px;
+  border: 1px solid #f0b8b2;
+  border-radius: 8px;
+  background: #fff4f2;
+  color: #b42318;
+  padding: 10px;
+  font-size: 13px;
+}
+
+.mode-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  border: 1px solid #cfd6e2;
+  border-radius: 8px;
+  background: #f7f9fc;
+  padding: 4px;
+}
+
+.mode-picker button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #465268;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mode-picker button[aria-pressed="true"] {
+  background: #24364b;
+  color: #ffffff;
+}
+
+.proxy-summary {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  border: 1px solid #e3e8ef;
+  border-radius: 8px;
+  background: #fafbfc;
+  padding: 12px;
+}
+
+.proxy-summary span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.proxy-summary strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actions button {
+  min-height: 38px;
+  border: 1px solid #cfd6e2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.actions button.danger {
+  border-color: #d92d20;
+  color: #b42318;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
