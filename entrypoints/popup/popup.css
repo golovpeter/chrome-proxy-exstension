@@ -13,7 +13,7 @@
 }
 
 body {
-  width: 360px;
+  width: 300px;
   margin: 0;
   background: #ffffff;
 }
@@ -23,7 +23,7 @@ button {
 }
 
 .popup {
-  padding: 16px;
+  padding: 14px;
 }
 
 header {
@@ -81,27 +81,26 @@ h1 {
 
 .mode-picker {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  border: 1px solid #cfd6e2;
-  border-radius: 8px;
-  background: #f7f9fc;
-  padding: 4px;
+  grid-template-columns: 1fr;
+  gap: 6px;
 }
 
 .mode-picker button {
-  min-height: 34px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
+  min-height: 32px;
+  border: 1px solid #cfd6e2;
+  border-radius: 7px;
+  background: #ffffff;
   color: #465268;
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
+  padding: 7px 10px;
+  text-align: left;
   white-space: nowrap;
 }
 
 .mode-picker button[aria-pressed="true"] {
+  border-color: #24364b;
   background: #24364b;
   color: #ffffff;
 }

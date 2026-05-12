@@ -96,7 +96,7 @@ export function Popup() {
           <button
             key={mode.value}
             type="button"
-            aria-pressed={settings?.activeMode === mode.value}
+            aria-pressed={enabled && settings?.activeMode === mode.value}
             disabled={busy || !settings}
             onClick={() => void selectMode(mode.value)}
           >
@@ -106,7 +106,7 @@ export function Popup() {
         <button type="button" aria-pressed={!enabled} disabled={busy || !settings} onClick={() => void disableProxy()}>
           Disabled
         </button>
-        <button type="button" onClick={openDashboard}>
+        <button type="button" aria-pressed={false} onClick={openDashboard}>
           Конфигурация
         </button>
       </section>
