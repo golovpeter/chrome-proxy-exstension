@@ -46,15 +46,10 @@ textarea {
 }
 
 .brand-mark {
-  display: grid;
   width: 42px;
   height: 42px;
-  place-items: center;
-  border: 1px solid #cfd6e2;
   border-radius: 8px;
-  background: #f0f3f7;
-  font-size: 13px;
-  font-weight: 700;
+  object-fit: contain;
 }
 
 .brand strong,

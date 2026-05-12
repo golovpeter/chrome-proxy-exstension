@@ -1,50 +1,108 @@
-# Chrome Proxy Manager
+<h1 align="center">Chrome Proxy Manager</h1>
 
-Manifest V3 Chrome extension for routing browser traffic through HTTP, HTTPS, or SOCKS proxies. The extension uses WXT, React, TypeScript, and Vitest.
+<p align="center">
+  <strong>Manifest V3</strong> расширение для Chrome — маршрутизация трафика через HTTP, HTTPS или SOCKS прокси.
+</p>
 
-## Features
+<p align="center">
+  <img src="https://img.shields.io/badge/TypeScript-latest-3178c6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/React-latest-61dafb?logo=react&logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/WXT-latest-ffab00?logo=googlechrome&logoColor=white" alt="WXT">
+  <img src="https://img.shields.io/badge/Manifest-V3-green" alt="Manifest V3">
+</p>
 
-- Full settings dashboard opened as the extension options page.
-- Compact popup for quick HTTP/HTTPS/SOCKS mode switching.
-- `singleProxy` and per-protocol proxy modes.
-- HTTP, HTTPS, SOCKS4, and SOCKS5 proxy configuration.
-- Bypass list for `<local>`, CIDR ranges, wildcard domains, hosts, and host ports.
-- Proxy authentication through `chrome.webRequest.onAuthRequired`.
-- JSON import/export, reset, inline validation, and local credential clearing.
+---
 
-## Commands
+## Скриншоты
+
+<table>
+  <tr>
+    <td align="center"><b>Popup</b></td>
+    <td align="center"><b>Панель настроек</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/popup.png" width="300" alt="Popup"></td>
+    <td><img src="docs/screenshots/options.png" width="600" alt="Options dashboard"></td>
+  </tr>
+</table>
+
+## Возможности
+
+- **Popup** — быстрое переключение режима прокси (HTTP / HTTPS / SOCKS / Disabled)
+- **Дашборд настроек** — полная конфигурация всех параметров прокси
+- **Режимы прокси** — `singleProxy` (один активный) или `perProtocol` (раздельные для HTTP/HTTPS/SOCKS)
+- **SOCKS4 и SOCKS5**
+- **Bypass-лист** — `<local>`, CIDR-диапазоны, wildcard-домены, host:port
+- **Proxy-аутентификация** — автоматическая подстановка credentials через `chrome.webRequest.onAuthRequired`
+- **Проверка подключения** — `fetch` к Google generate_204 с таймаутом
+- **JSON импорт/экспорт** настроек
+- **Сброс** настроек и credentials
+
+## Установка
+
+### Из исходников
 
 ```bash
 npm install
-npm run dev
-npm test
-npm run typecheck
 npm run build
 ```
 
-- `npm run dev`: starts WXT development mode.
-- `npm test`: runs Vitest unit tests.
-- `npm run typecheck`: checks TypeScript.
-- `npm run build`: builds the extension into `.output/chrome-mv3`.
+1. Откройте `chrome://extensions`
+2. Включите **Developer mode**
+3. Нажмите **Load unpacked**
+4. Выберите папку `.output/chrome-mv3`
 
-## Install in Chrome
+### Разработка
 
-1. Run `npm install`.
-2. Run `npm run build`.
-3. Open `chrome://extensions`.
-4. Enable Developer mode.
-5. Click “Load unpacked”.
-6. Select `.output/chrome-mv3`.
+```bash
+npm install
+npm run dev        # WXT dev mode с HMR
+npm test           # Vitest unit-тесты
+npm run typecheck  # TypeScript проверка
+npm run build      # Production-сборка
+```
+
+## Архитектура
+
+```
+entrypoints/
+  background.ts          # Service worker — обработка сообщений, применение настроек
+  popup/                  # Компактный popup для быстрого переключения
+  options/                # Полноэкранный дашборд настроек
+
+src/
+  core/
+    settings.ts           # Типы ProxySettings, значения по умолчанию
+    proxyConfig.ts        # buildProxyConfig() → chrome.proxy API
+    validation.ts         # Валидация host/port/settings
+    bypassRules.ts        # Парсинг bypass-листа
+    importExport.ts       # JSON экспорт/импорт
+  platform/
+    proxy.ts              # chrome.proxy.settings — apply/clear/check
+    storage.ts            # chrome.storage.local через Promise
+    auth.ts               # webRequest.onAuthRequired — proxy auth
+    messages.ts           # Типизированный messaging popup/options ↔ background
+  ui/
+    components.tsx        # Переиспользуемые UI-компоненты
+```
 
 ## Permissions
 
-The extension requests:
+| Permission | Назначение |
+|---|---|
+| `proxy` | Управление прокси-настройками через `chrome.proxy` |
+| `storage` | Хранение настроек и credentials в `chrome.storage.local` |
+| `webRequest` | Перехват proxy auth challenges |
+| `webRequestAuthProvider` | Ответ на auth challenges с credentials |
+| `<all_urls>` | Наблюдение за auth challenges для проксированных запросов |
 
-- `proxy`: apply fixed proxy settings through `chrome.proxy`.
-- `storage`: persist settings and credentials in `chrome.storage.local`.
-- `webRequest` and `webRequestAuthProvider`: answer proxy authentication challenges.
-- `<all_urls>` host permissions: observe authentication challenges for proxied requests.
+## Технический стек
 
-## Manifest V3 Limits
+- **[WXT](https://wxt.dev/)** — фреймворк для браузерных расширений
+- **React** + **TypeScript** — UI и типобезопасность
+- **Vitest** — unit-тесты
+- **Chrome Manifest V3** — API расширений
 
-The background script is a service worker and can be suspended by Chrome. It reapplies saved settings when started. Credentials are stored locally in extension storage; Chrome extensions do not provide a dedicated OS keychain or hardware-backed secret vault. The connection check is best-effort and uses the currently applied Chrome proxy configuration.
+## License
+
+MIT

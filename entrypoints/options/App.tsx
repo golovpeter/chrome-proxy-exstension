@@ -210,7 +210,7 @@ export function App() {
     <div className="app-shell">
       <aside className="sidebar" aria-label="Основная навигация">
         <div className="brand">
-          <span className="brand-mark">PM</span>
+          <img className="brand-mark" src="/icon-48.png" alt="" />
           <div>
             <strong>Proxy Manager</strong>
             <small>Manifest V3</small>

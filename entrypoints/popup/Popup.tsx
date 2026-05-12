@@ -106,7 +106,7 @@ export function Popup() {
         <button type="button" aria-pressed={!enabled} disabled={busy || !settings} onClick={() => void disableProxy()}>
           Disabled
         </button>
-        <button type="button" aria-pressed={false} onClick={openDashboard}>
+        <button type="button" className="dashboard-link" onClick={openDashboard}>
           Конфигурация
         </button>
       </section>

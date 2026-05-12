@@ -129,3 +129,17 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
+
+.mode-picker button.dashboard-link {
+  border: 1px dashed #9aa8bf;
+  background: transparent;
+  color: #5a6a85;
+  font-weight: 500;
+  text-align: center;
+}
+
+.mode-picker button.dashboard-link:hover {
+  border-style: solid;
+  background: #f2f5f9;
+  color: #24364b;
+}
