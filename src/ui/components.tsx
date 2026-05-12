@@ -19,7 +19,9 @@ export function Field({
     <label className="field">
       <span>{label}</span>
       <input {...props} />
-      {error ? <small className="field-error">{error}</small> : hint ? <small>{hint}</small> : null}
+      <small className={error ? 'field-error' : ''} aria-hidden={!error && !hint}>
+        {error ?? hint ?? ' '}
+      </small>
     </label>
   );
 }
@@ -34,7 +36,9 @@ export function TextAreaField({
     <label className="field">
       <span>{label}</span>
       <textarea {...props} />
-      {error ? <small className="field-error">{error}</small> : hint ? <small>{hint}</small> : null}
+      <small className={error ? 'field-error' : ''} aria-hidden={!error && !hint}>
+        {error ?? hint ?? ' '}
+      </small>
     </label>
   );
 }

@@ -13,7 +13,7 @@
 }
 
 body {
-  width: 340px;
+  width: 360px;
   margin: 0;
   background: #ffffff;
 }
@@ -81,7 +81,7 @@ h1 {
 
 .mode-picker {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
   border: 1px solid #cfd6e2;
   border-radius: 8px;
@@ -98,6 +98,7 @@ h1 {
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .mode-picker button[aria-pressed="true"] {
@@ -123,28 +124,6 @@ h1 {
 .proxy-summary strong {
   overflow-wrap: anywhere;
   font-size: 14px;
-}
-
-.actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.actions button {
-  min-height: 38px;
-  border: 1px solid #cfd6e2;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #172033;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.actions button.danger {
-  border-color: #d92d20;
-  color: #b42318;
 }
 
 button:disabled {

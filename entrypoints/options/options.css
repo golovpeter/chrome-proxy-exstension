@@ -14,7 +14,6 @@
 
 body {
   margin: 0;
-  min-width: 920px;
   background: #f5f6f8;
 }
 
@@ -91,6 +90,7 @@ textarea {
 
 .content {
   width: min(1120px, 100%);
+  min-width: 0;
   padding: 28px;
 }
 
@@ -122,7 +122,7 @@ textarea {
 .form-grid,
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
   gap: 16px;
 }
 
@@ -153,6 +153,7 @@ textarea {
 .segmented-field {
   display: grid;
   gap: 7px;
+  min-width: 0;
 }
 
 .field span,
@@ -165,12 +166,17 @@ textarea {
 .field input,
 .field textarea {
   width: 100%;
+  min-width: 0;
   border: 1px solid #cfd6e2;
   border-radius: 8px;
   background: #ffffff;
   color: #101828;
   padding: 10px 11px;
   outline: none;
+}
+
+.field input {
+  height: 42px;
 }
 
 .field input:focus,
@@ -180,6 +186,7 @@ textarea {
 }
 
 .field small {
+  min-height: 17px;
   color: #667085;
 }
 
@@ -189,21 +196,24 @@ textarea {
 
 .segmented-control {
   display: flex;
-  width: fit-content;
+  width: 100%;
   border: 1px solid #cfd6e2;
   border-radius: 8px;
   background: #ffffff;
   padding: 3px;
+  overflow-x: auto;
 }
 
 .segmented-control button {
-  min-width: 84px;
+  flex: 1 0 max-content;
+  min-width: 86px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: #465268;
   cursor: pointer;
   padding: 8px 10px;
+  white-space: nowrap;
 }
 
 .segmented-control button[aria-pressed="true"] {
@@ -253,6 +263,7 @@ textarea {
   cursor: pointer;
   padding: 9px 14px;
   font-weight: 650;
+  white-space: nowrap;
 }
 
 .button:disabled {
@@ -285,4 +296,67 @@ textarea {
   margin-top: 8px;
   white-space: normal;
   word-break: break-word;
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid #d9dee7;
+    padding: 14px;
+  }
+
+  .brand {
+    margin-bottom: 12px;
+  }
+
+  .sidebar nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .sidebar nav button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .control-grid,
+  .form-grid,
+  .info-grid,
+  .proxy-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .content {
+    padding: 12px;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .actions {
+    display: grid;
+  }
+
+  .button {
+    width: 100%;
+  }
 }

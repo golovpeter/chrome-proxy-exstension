@@ -22,6 +22,10 @@ export function Popup() {
       return 'No proxy loaded';
     }
 
+    if (!settings.enabled) {
+      return 'Proxy disabled';
+    }
+
     const endpoint = settings.proxies[settings.activeMode];
     return endpoint.host && endpoint.port ? `${endpoint.host}:${endpoint.port}` : 'Proxy not configured';
   }, [settings]);
@@ -42,7 +46,7 @@ export function Popup() {
       return;
     }
 
-    const next = { ...settings, activeMode, proxyMode: 'singleProxy' as const };
+    const next = { ...settings, enabled: true, activeMode, proxyMode: 'singleProxy' as const };
     setSettings(next);
     setBusy(true);
     const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: next });
@@ -87,10 +91,6 @@ export function Popup() {
       </header>
 
       {error ? <div className="notice">{error}</div> : null}
-      {settings?.proxyMode === 'perProtocol' ? (
-        <div className="notice neutral">Selecting a mode here switches the extension to singleProxy.</div>
-      ) : null}
-
       <section className="mode-picker" aria-label="Active proxy mode">
         {modes.map((mode) => (
           <button
@@ -103,21 +103,18 @@ export function Popup() {
             {mode.label}
           </button>
         ))}
+        <button type="button" aria-pressed={!enabled} disabled={busy || !settings} onClick={() => void disableProxy()}>
+          Disabled
+        </button>
+        <button type="button" onClick={openDashboard}>
+          Конфигурация
+        </button>
       </section>
 
       <section className="proxy-summary">
         <span>Current proxy</span>
         <strong>{currentProxy}</strong>
       </section>
-
-      <div className="actions">
-        <button type="button" className="danger" disabled={busy || !settings} onClick={() => void disableProxy()}>
-          Disable proxy
-        </button>
-        <button type="button" onClick={openDashboard}>
-          Dashboard
-        </button>
-      </div>
     </main>
   );
 }

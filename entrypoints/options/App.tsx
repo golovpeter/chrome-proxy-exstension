@@ -45,9 +45,11 @@ export function App() {
     }
   }
 
-  async function saveProxySettings(nextSettings = settings) {
+  async function saveProxySettings(nextSettings = settings, options: { enable?: boolean } = {}) {
+    const settingsToSave = options.enable === undefined ? nextSettings : { ...nextSettings, enabled: options.enable };
+
     setBusy(true);
-    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: nextSettings });
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: settingsToSave });
     setBusy(false);
 
     if (response.ok) {
@@ -72,7 +74,31 @@ export function App() {
   }
 
   async function checkConnection() {
+    const settingsToCheck = { ...settings, enabled: true };
+    const currentValidation = validateSettings(settingsToCheck);
+
+    if (!currentValidation.valid) {
+      setStatus({ tone: 'error', message: currentValidation.errors.map((error) => error.message).join(' ') });
+      return;
+    }
+
     setBusy(true);
+    setStatus({ tone: 'info', message: 'Сохраняю и применяю текущую конфигурацию перед проверкой...' });
+    const saveResponse = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: settingsToCheck });
+
+    if (!saveResponse.ok) {
+      setBusy(false);
+      setStatus({ tone: 'error', message: saveResponse.error });
+      return;
+    }
+
+    setSettings(saveResponse.data.settings);
+    if (saveResponse.data.settings.lastError) {
+      setBusy(false);
+      setStatus({ tone: 'error', message: saveResponse.data.settings.lastError });
+      return;
+    }
+
     const response = await sendRuntimeMessage<{ ok: true } | { ok: false; error: string }>({ type: 'CHECK_CONNECTION' });
     setBusy(false);
 
@@ -215,15 +241,6 @@ export function App() {
 
             <div className="control-grid">
               <SegmentedControl
-                label="Состояние"
-                value={settings.enabled ? 'enabled' : 'disabled'}
-                options={[
-                  { value: 'enabled', label: 'Enabled' },
-                  { value: 'disabled', label: 'Disabled' },
-                ]}
-                onChange={(value) => updateSettings({ enabled: value === 'enabled' })}
-              />
-              <SegmentedControl
                 label="Активный режим"
                 value={settings.activeMode}
                 options={[
@@ -258,7 +275,7 @@ export function App() {
             <ProxyFields mode="socks" title="SOCKS-прокси" settings={settings} errors={errorsByField} onChange={updateProxy} />
 
             <div className="actions">
-              <Button variant="primary" disabled={busy || !validation.valid} onClick={() => void saveProxySettings()}>
+              <Button variant="primary" disabled={busy || !validateSettings({ ...settings, enabled: true }).valid} onClick={() => void saveProxySettings(settings, { enable: true })}>
                 Сохранить
               </Button>
               <Button disabled={busy || !hasActiveProxy} onClick={() => void checkConnection()}>
@@ -303,9 +320,6 @@ export function App() {
               title="Аутентификация"
               description="Credentials применяются background service worker при proxy auth challenge."
             />
-            <StatusBanner tone="warning">
-              Пароль хранится в chrome.storage.local. Это локальное хранилище расширения, а не системный keychain.
-            </StatusBanner>
             <div className="form-grid">
               <Field
                 label="Username"
