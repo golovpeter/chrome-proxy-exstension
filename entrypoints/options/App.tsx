@@ -103,15 +103,33 @@ export function App() {
     setBusy(false);
 
     if (!response.ok) {
-      setStatus({ tone: 'error', message: response.error });
+      await disableAfterFailedCheck(response.error);
       return;
     }
 
-    setStatus(
-      response.data.ok
-        ? { tone: 'success', message: 'Проверка подключения прошла успешно.' }
-        : { tone: 'warning', message: response.data.error },
-    );
+    if (!response.data.ok) {
+      await disableAfterFailedCheck(response.data.error);
+      return;
+    }
+
+    setStatus({ tone: 'success', message: 'Проверка подключения прошла успешно.' });
+  }
+
+  async function disableAfterFailedCheck(message: string) {
+    const disableResponse = await sendRuntimeMessage<ExtensionState>({ type: 'DISABLE_PROXY' });
+
+    if (disableResponse.ok) {
+      setSettings(disableResponse.data.settings);
+      setStatus({
+        tone: 'error',
+        message: `${message} Прокси отключен, чтобы не оставить браузер без доступа к интернету.`,
+      });
+    } else {
+      setStatus({
+        tone: 'error',
+        message: `${message} Не удалось автоматически отключить прокси: ${disableResponse.error}`,
+      });
+    }
   }
 
   async function saveCredentials() {

@@ -56,13 +56,29 @@ export async function checkConnection(timeoutMs = 7000): Promise<{ ok: true } | 
 
     return response.ok || response.status === 204
       ? { ok: true }
-      : { ok: false, error: `Connection check returned HTTP ${response.status}.` };
+      : { ok: false, error: `Прокси ответил, но проверочный запрос вернул HTTP ${response.status}.` };
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : 'Connection check failed.',
+      error: formatConnectionError(error),
     };
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function formatConnectionError(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return 'Прокси не ответил вовремя. Проверьте host, port, тип прокси и credentials.';
+  }
+
+  if (error instanceof TypeError && error.message === 'Failed to fetch') {
+    return 'Не удалось подключиться через прокси. Проверьте host, port, тип прокси и логин/пароль.';
+  }
+
+  if (error instanceof Error && error.message) {
+    return `Проверка прокси не прошла: ${error.message}`;
+  }
+
+  return 'Проверка прокси не прошла. Проверьте настройки подключения.';
 }
