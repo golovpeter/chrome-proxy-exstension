@@ -59,6 +59,19 @@ describe('settings import/export', () => {
     });
   });
 
+  it('imports disabled settings without proxy endpoints', () => {
+    const result = importSettings(
+      JSON.stringify({
+        enabled: false,
+        activeMode: 'http',
+        proxyMode: 'singleProxy',
+        proxies: {},
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
   it('rejects settings with invalid active proxy port', () => {
     const result = importSettings(
       JSON.stringify({

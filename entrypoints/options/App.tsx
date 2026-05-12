@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { parseBypassRules } from '../../src/core/bypassRules';
 import { exportSettings, importSettings } from '../../src/core/importExport';
 import { DEFAULT_SETTINGS, type ActiveProxyMode, type ProxySettings, type SocksVersion } from '../../src/core/settings';
 import { validateHost, validatePort, validateSettings } from '../../src/core/validation';
@@ -25,6 +26,7 @@ export function App() {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const validation = useMemo(() => validateSettings(settings), [settings]);
+  const bypassPreview = useMemo(() => parseBypassRules(settings.bypassListRaw), [settings.bypassListRaw]);
   const errorsByField = useMemo(() => {
     return new Map(validation.errors.map((error) => [error.field, error.message]));
   }, [validation.errors]);
@@ -285,7 +287,7 @@ export function App() {
             />
             <div className="preview-box">
               <strong>Normalized preview</strong>
-              <code>{settings.bypassList.length ? settings.bypassList.join(', ') : 'No valid rules yet'}</code>
+              <code>{bypassPreview.rules.length ? bypassPreview.rules.join(', ') : 'No valid rules yet'}</code>
             </div>
             <div className="actions">
               <Button variant="primary" disabled={busy || !validation.valid} onClick={() => void saveProxySettings()}>

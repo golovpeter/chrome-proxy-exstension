@@ -42,7 +42,7 @@ export function Popup() {
       return;
     }
 
-    const next = { ...settings, activeMode };
+    const next = { ...settings, activeMode, proxyMode: 'singleProxy' as const };
     setSettings(next);
     setBusy(true);
     const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: next });
@@ -87,6 +87,9 @@ export function Popup() {
       </header>
 
       {error ? <div className="notice">{error}</div> : null}
+      {settings?.proxyMode === 'perProtocol' ? (
+        <div className="notice neutral">Selecting a mode here switches the extension to singleProxy.</div>
+      ) : null}
 
       <section className="mode-picker" aria-label="Active proxy mode">
         {modes.map((mode) => (

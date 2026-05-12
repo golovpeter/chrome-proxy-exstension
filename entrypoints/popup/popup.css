@@ -73,6 +73,12 @@ h1 {
   font-size: 13px;
 }
 
+.notice.neutral {
+  border-color: #d7dfea;
+  background: #f7f9fc;
+  color: #475467;
+}
+
 .mode-picker {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

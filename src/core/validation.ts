@@ -63,8 +63,10 @@ export function validateSettings(settings: ProxySettings): SettingsValidationRes
   const warnings: FieldValidationError[] = [];
   const modes = settings.proxyMode === 'singleProxy' ? [settings.activeMode] : (['http', 'https', 'socks'] satisfies ActiveProxyMode[]);
 
-  for (const mode of modes) {
-    collectEndpointErrors(mode, settings.proxies[mode], errors);
+  if (settings.enabled) {
+    for (const mode of modes) {
+      collectEndpointErrors(mode, settings.proxies[mode], errors);
+    }
   }
 
   const bypass = parseBypassRules(settings.bypassListRaw);

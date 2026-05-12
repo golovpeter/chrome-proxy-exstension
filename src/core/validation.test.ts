@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { validateHost, validatePort } from './validation';
+import { DEFAULT_SETTINGS } from './settings';
 
 describe('validateHost', () => {
   it('rejects empty hosts, schemes, and paths', () => {
@@ -22,5 +23,13 @@ describe('validatePort', () => {
     expect(validatePort('0').valid).toBe(false);
     expect(validatePort('65536').valid).toBe(false);
     expect(validatePort('abc').valid).toBe(false);
+  });
+});
+
+describe('validateSettings', () => {
+  it('allows disabled settings without configured proxy endpoints', async () => {
+    const { validateSettings } = await import('./validation');
+
+    expect(validateSettings(DEFAULT_SETTINGS).valid).toBe(true);
   });
 });

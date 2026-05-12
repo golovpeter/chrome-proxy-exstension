@@ -67,9 +67,7 @@ async function saveAndMaybeApply(settings: ProxySettings): Promise<ProxySettings
 
   await saveSettings(next);
 
-  if (next.enabled) {
-    await applyPersistedSettings();
-  }
+  await applyPersistedSettings();
 
   return loadSettings();
 }

@@ -15,6 +15,8 @@ export function registerAuthHandler() {
     { urls: ['<all_urls>'] },
     ['asyncBlocking'],
   );
+  chrome.webRequest.onCompleted.addListener(cleanupAuthAttempt, { urls: ['<all_urls>'] });
+  chrome.webRequest.onErrorOccurred.addListener(cleanupAuthAttempt, { urls: ['<all_urls>'] });
 }
 
 async function resolveAuthCredentials(
@@ -43,4 +45,8 @@ async function resolveAuthCredentials(
       password: credentials.password,
     },
   };
+}
+
+function cleanupAuthAttempt(details: { requestId: string }) {
+  attemptsByRequest.delete(details.requestId);
 }
