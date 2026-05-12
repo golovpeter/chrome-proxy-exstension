@@ -107,7 +107,7 @@ export function Popup() {
           Disabled
         </button>
         <button type="button" className="dashboard-link" onClick={openDashboard}>
-          Конфигурация
+          Settings
         </button>
       </section>
 

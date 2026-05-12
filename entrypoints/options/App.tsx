@@ -9,10 +9,10 @@ import { Button, Field, SectionHeader, SegmentedControl, StatusBanner, TextAreaF
 type SectionId = 'proxy' | 'rules' | 'auth' | 'about';
 
 const sections: { id: SectionId; label: string }[] = [
-  { id: 'proxy', label: 'Прокси' },
-  { id: 'rules', label: 'Правила' },
-  { id: 'auth', label: 'Аутентификация' },
-  { id: 'about', label: 'О расширении' },
+  { id: 'proxy', label: 'Proxy' },
+  { id: 'rules', label: 'Bypass Rules' },
+  { id: 'auth', label: 'Authentication' },
+  { id: 'about', label: 'About' },
 ];
 
 export function App() {
@@ -20,7 +20,7 @@ export function App() {
   const [settings, setSettings] = useState<ProxySettings>(DEFAULT_SETTINGS);
   const [status, setStatus] = useState<{ tone: 'info' | 'success' | 'error' | 'warning'; message: string }>({
     tone: 'info',
-    message: 'Загрузка настроек...',
+    message: 'Loading settings...',
   });
   const [busy, setBusy] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -39,7 +39,7 @@ export function App() {
     const response = await sendRuntimeMessage<ExtensionState>({ type: 'GET_STATE' });
     if (response.ok) {
       setSettings(response.data.settings);
-      setStatus({ tone: 'info', message: response.data.settings.enabled ? 'Прокси включен.' : 'Прокси отключен.' });
+      setStatus({ tone: 'info', message: response.data.settings.enabled ? 'Proxy is enabled.' : 'Proxy is disabled.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
@@ -54,7 +54,7 @@ export function App() {
 
     if (response.ok) {
       setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Настройки и credentials сохранены и применены.' });
+      setStatus({ tone: 'success', message: 'Settings and credentials saved and applied.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
@@ -67,7 +67,7 @@ export function App() {
 
     if (response.ok) {
       setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Прокси отключен.' });
+      setStatus({ tone: 'success', message: 'Proxy disabled.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
@@ -83,7 +83,7 @@ export function App() {
     }
 
     setBusy(true);
-    setStatus({ tone: 'info', message: 'Сохраняю и применяю текущую конфигурацию перед проверкой...' });
+    setStatus({ tone: 'info', message: 'Saving and applying current configuration before check...' });
     const saveResponse = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: settingsToCheck });
 
     if (!saveResponse.ok) {
@@ -112,7 +112,7 @@ export function App() {
       return;
     }
 
-    setStatus({ tone: 'success', message: 'Проверка подключения прошла успешно.' });
+    setStatus({ tone: 'success', message: 'Connection check passed successfully.' });
   }
 
   async function saveCredentials() {
@@ -125,7 +125,7 @@ export function App() {
 
     if (response.ok) {
       setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Credentials сохранены локально.' });
+      setStatus({ tone: 'success', message: 'Credentials saved locally.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
@@ -138,14 +138,14 @@ export function App() {
 
     if (response.ok) {
       setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Credentials очищены.' });
+      setStatus({ tone: 'success', message: 'Credentials cleared.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
   }
 
   async function resetSettings() {
-    if (!confirm('Сбросить настройки и credentials?')) {
+    if (!confirm('Reset all settings and credentials?')) {
       return;
     }
 
@@ -155,7 +155,7 @@ export function App() {
 
     if (response.ok) {
       setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Настройки сброшены.' });
+      setStatus({ tone: 'success', message: 'Settings reset to defaults.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
@@ -200,7 +200,7 @@ export function App() {
     }
 
     setSettings(result.settings);
-    setStatus({ tone: 'success', message: 'Настройки импортированы. Нажмите “Сохранить”, чтобы применить.' });
+    setStatus({ tone: 'success', message: 'Settings imported. Click "Save" to apply.' });
   }
 
   const activeEndpoint = settings.proxies[settings.activeMode];
@@ -208,7 +208,7 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar" aria-label="Основная навигация">
+      <aside className="sidebar" aria-label="Main navigation">
         <div className="brand">
           <img className="brand-mark" src="/icon-48.png" alt="" />
           <div>
@@ -236,13 +236,13 @@ export function App() {
         {activeSection === 'proxy' ? (
           <section className="panel">
             <SectionHeader
-              title="Прокси"
-              description="Настройте HTTP, HTTPS и SOCKS-прокси. В singleProxy используется выбранный активный режим."
+              title="Proxy"
+              description="Configure HTTP, HTTPS, and SOCKS proxies. In singleProxy mode, the selected active mode is used."
             />
 
             <div className="control-grid">
               <SegmentedControl
-                label="Активный режим"
+                label="Active mode"
                 value={settings.activeMode}
                 options={[
                   { value: 'http', label: 'HTTP' },
@@ -255,8 +255,8 @@ export function App() {
                 label="Proxy mode"
                 value={settings.proxyMode}
                 options={[
-                  { value: 'singleProxy', label: 'singleProxy' },
-                  { value: 'perProtocol', label: 'По протоколам' },
+                  { value: 'singleProxy', label: 'Single proxy' },
+                  { value: 'perProtocol', label: 'Per protocol' },
                 ]}
                 onChange={(value) => updateSettings({ proxyMode: value })}
               />
@@ -271,19 +271,19 @@ export function App() {
               />
             </div>
 
-            <ProxyFields mode="http" title="HTTP-прокси" settings={settings} errors={errorsByField} onChange={updateProxy} />
-            <ProxyFields mode="https" title="HTTPS-прокси" settings={settings} errors={errorsByField} onChange={updateProxy} />
-            <ProxyFields mode="socks" title="SOCKS-прокси" settings={settings} errors={errorsByField} onChange={updateProxy} />
+            <ProxyFields mode="http" title="HTTP Proxy" settings={settings} errors={errorsByField} onChange={updateProxy} />
+            <ProxyFields mode="https" title="HTTPS Proxy" settings={settings} errors={errorsByField} onChange={updateProxy} />
+            <ProxyFields mode="socks" title="SOCKS Proxy" settings={settings} errors={errorsByField} onChange={updateProxy} />
 
             <div className="actions">
               <Button variant="primary" disabled={busy || !validateSettings({ ...settings, enabled: true }).valid} onClick={() => void saveProxySettings(settings, { enable: true })}>
-                Сохранить
+                Save
               </Button>
               <Button disabled={busy || !hasActiveProxy} onClick={() => void checkConnection()}>
-                Проверить подключение
+                Check Connection
               </Button>
               <Button variant="danger" disabled={busy} onClick={() => void disableProxy()}>
-                Отключить прокси
+                Disable Proxy
               </Button>
             </div>
           </section>
@@ -292,16 +292,16 @@ export function App() {
         {activeSection === 'rules' ? (
           <section className="panel">
             <SectionHeader
-              title="Правила"
-              description="Сайты, IP, CIDR и маски доменов, для которых прокси не используется."
+              title="Bypass Rules"
+              description="Sites, IPs, CIDR ranges, and domain patterns that bypass the proxy."
             />
             <TextAreaField
-              label="Whitelist / bypass list"
+              label="Bypass list"
               value={settings.bypassListRaw}
               rows={7}
               onChange={(event) => updateSettings({ bypassListRaw: event.target.value })}
               error={errorsByField.get('bypassListRaw')}
-              hint="Формат через запятую. Примеры: <local>, 192.168.0.0/16, *.example.com, example.com:99"
+              hint="Comma-separated. Examples: <local>, 192.168.0.0/16, *.example.com, example.com:99"
             />
             <div className="preview-box">
               <strong>Normalized preview</strong>
@@ -309,7 +309,7 @@ export function App() {
             </div>
             <div className="actions">
               <Button variant="primary" disabled={busy || !validation.valid} onClick={() => void saveProxySettings()}>
-                Сохранить
+                Save
               </Button>
             </div>
           </section>
@@ -318,8 +318,8 @@ export function App() {
         {activeSection === 'auth' ? (
           <section className="panel">
             <SectionHeader
-              title="Аутентификация"
-              description="Credentials применяются background service worker при proxy auth challenge."
+              title="Authentication"
+              description="Credentials are applied by the background service worker on proxy auth challenges."
             />
             <div className="form-grid">
               <Field
@@ -340,10 +340,10 @@ export function App() {
             </div>
             <div className="actions">
               <Button variant="primary" disabled={busy} onClick={() => void saveCredentials()}>
-                Сохранить credentials
+                Save Credentials
               </Button>
               <Button variant="danger" disabled={busy} onClick={() => void clearCredentials()}>
-                Очистить credentials
+                Clear Credentials
               </Button>
             </div>
           </section>
@@ -351,26 +351,26 @@ export function App() {
 
         {activeSection === 'about' ? (
           <section className="panel">
-            <SectionHeader title="О расширении" description="Сборка Chrome Manifest V3 для управления browser proxy." />
+            <SectionHeader title="About" description="Chrome Manifest V3 extension for browser proxy management." />
             <div className="info-grid">
               <div>
                 <strong>Permissions</strong>
-                <p>proxy, storage, webRequest, webRequestAuthProvider, host permissions для auth challenge.</p>
+                <p>proxy, storage, webRequest, webRequestAuthProvider, and host permissions for auth challenges.</p>
               </div>
               <div>
                 <strong>Manifest V3</strong>
-                <p>Service worker может выгружаться Chrome; настройки повторно применяются при запуске background.</p>
+                <p>The service worker may be suspended by Chrome; settings are reapplied when the background starts.</p>
               </div>
               <div>
                 <strong>Connection check</strong>
-                <p>Проверка best-effort и использует текущую примененную proxy-конфигурацию Chrome.</p>
+                <p>Best-effort check using the currently applied Chrome proxy configuration.</p>
               </div>
             </div>
             <div className="actions">
-              <Button onClick={handleExport}>Экспорт JSON</Button>
-              <Button onClick={() => importInputRef.current?.click()}>Импорт JSON</Button>
+              <Button onClick={handleExport}>Export JSON</Button>
+              <Button onClick={() => importInputRef.current?.click()}>Import JSON</Button>
               <Button variant="danger" disabled={busy} onClick={() => void resetSettings()}>
-                Сбросить настройки
+                Reset Settings
               </Button>
               <input
                 ref={importInputRef}
@@ -408,7 +408,7 @@ function ProxyFields({
     <section className="proxy-card">
       <div>
         <h2>{title}</h2>
-        <p>{mode === 'socks' ? `Используется как ${settings.socksVersion}` : `Scheme: ${mode}`}</p>
+        <p>{mode === 'socks' ? `Using ${settings.socksVersion}` : `Scheme: ${mode}`}</p>
       </div>
       <div className="form-grid">
         <Field label="Host" value={endpoint.host} error={hostError} onChange={(event) => onChange(mode, 'host', event.target.value)} />

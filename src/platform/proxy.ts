@@ -56,7 +56,7 @@ export async function checkConnection(timeoutMs = 7000): Promise<{ ok: true } | 
 
     return response.ok || response.status === 204
       ? { ok: true }
-      : { ok: false, error: `Прокси ответил, но проверочный запрос вернул HTTP ${response.status}.` };
+      : { ok: false, error: `Proxy responded, but the check request returned HTTP ${response.status}.` };
   } catch (error) {
     return {
       ok: false,
@@ -69,16 +69,16 @@ export async function checkConnection(timeoutMs = 7000): Promise<{ ok: true } | 
 
 function formatConnectionError(error: unknown): string {
   if (error instanceof DOMException && error.name === 'AbortError') {
-    return 'Прокси не ответил вовремя. Проверьте host, port, тип прокси и credentials.';
+    return 'Proxy did not respond in time. Check host, port, proxy type, and credentials.';
   }
 
   if (error instanceof TypeError && error.message === 'Failed to fetch') {
-    return 'Не удалось подключиться через прокси. Проверьте host, port, тип прокси и логин/пароль.';
+    return 'Could not connect through the proxy. Check host, port, proxy type, and credentials.';
   }
 
   if (error instanceof Error && error.message) {
-    return `Проверка прокси не прошла: ${error.message}`;
+    return `Connection check failed: ${error.message}`;
   }
 
-  return 'Проверка прокси не прошла. Проверьте настройки подключения.';
+  return 'Connection check failed. Check your proxy settings.';
 }
