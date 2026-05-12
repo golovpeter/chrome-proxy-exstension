@@ -1,5 +1,6 @@
 .superpowers/
 .worktrees/
+.wxt/
 node_modules/
 .output/
 dist/
