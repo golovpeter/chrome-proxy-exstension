@@ -17,6 +17,7 @@
     "react-dom": "latest"
   },
   "devDependencies": {
+    "@types/chrome": "^0.1.42",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@wxt-dev/module-react": "latest",
