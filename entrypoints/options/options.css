@@ -48,7 +48,8 @@ textarea {
 .brand-mark {
   width: 42px;
   height: 42px;
-  border-radius: 8px;
+  border-radius: 11px;
+  filter: drop-shadow(0 9px 18px rgba(29, 65, 101, 0.18));
   object-fit: contain;
 }
 

@@ -82,11 +82,14 @@ export function Popup() {
   return (
     <main className="popup">
       <header>
-        <div>
-          <h1>Proxy Manager</h1>
-          <p className={error ? 'status error' : enabled ? 'status enabled' : 'status disabled'}>
-            {error ? 'Error' : enabled ? 'Enabled' : 'Disabled'}
-          </p>
+        <div className="popup-brand">
+          <img className="popup-brand-mark" src="/icon-48.png" alt="" />
+          <div>
+            <h1>Proxy Manager</h1>
+            <p className={error ? 'status error' : enabled ? 'status enabled' : 'status disabled'}>
+              {error ? 'Error' : enabled ? 'Enabled' : 'Disabled'}
+            </p>
+          </div>
         </div>
       </header>
 
