@@ -77,6 +77,13 @@ async function loadExtensionState(): Promise<ExtensionState> {
 async function saveAndMaybeApplyProfile(profile: ProxyProfile): Promise<void> {
   const state = await loadProfilesState();
   const nextProfile = prepareProfileForSave(profile);
+  const activeProfile = getActiveProfile(state);
+
+  if (state.activeProfileId === nextProfile.id && activeProfile.settings.enabled && !nextProfile.settings.enabled) {
+    await clearProxySettingsForProfile(activeProfile);
+    await saveProfile(nextProfile);
+    return;
+  }
 
   await saveProfile(nextProfile);
 
@@ -90,7 +97,7 @@ async function applyPersistedSettings(): Promise<void> {
   const activeProfile = getActiveProfile(state);
 
   if (!activeProfile.settings.enabled) {
-    await clearProxySettings();
+    await clearProxySettingsForProfile(activeProfile);
     return;
   }
 
@@ -104,12 +111,25 @@ async function applyPersistedSettings(): Promise<void> {
   } catch (error) {
     await saveProfile({
       ...activeProfile,
-      lastError: error instanceof Error ? error.message : 'Failed to apply proxy settings.',
+      lastError: getErrorMessage(error, 'Failed to apply proxy settings.'),
     });
   }
 }
 
 async function selectAndApplyProfile(profileId: string): Promise<void> {
+  const state = await loadProfilesState();
+  const nextProfile = state.profiles.find((profile) => profile.id === profileId);
+
+  if (!nextProfile) {
+    throw new Error(`Profile "${profileId}" not found.`);
+  }
+
+  if (!nextProfile.settings.enabled) {
+    await clearProxySettingsForProfile(getActiveProfile(state));
+    await selectProfile(profileId);
+    return;
+  }
+
   await selectProfile(profileId);
   await applyPersistedSettings();
 }
@@ -156,14 +176,26 @@ async function deleteProfileAndMaybeReapply(profileId: string): Promise<void> {
 
   const profiles = state.profiles.filter((profile) => profile.id !== profileId);
   const nextActiveProfileId = state.activeProfileId === profileId ? profiles[0]!.id : state.activeProfileId;
-
-  await saveProfilesState({
+  const activeProfileChanged = nextActiveProfileId !== state.activeProfileId;
+  const nextState: ProxyProfilesState = {
     version: 2,
     activeProfileId: nextActiveProfileId,
     profiles,
-  });
+  };
 
-  if (nextActiveProfileId !== state.activeProfileId) {
+  if (activeProfileChanged) {
+    const nextActiveProfile = profiles.find((profile) => profile.id === nextActiveProfileId)!;
+
+    if (!nextActiveProfile.settings.enabled) {
+      await clearProxySettingsForProfile(getActiveProfile(state));
+      await saveProfilesState(nextState);
+      return;
+    }
+  }
+
+  await saveProfilesState(nextState);
+
+  if (activeProfileChanged) {
     await applyPersistedSettings();
   }
 }
@@ -172,6 +204,7 @@ async function disableActiveProfile(): Promise<void> {
   const state = await loadProfilesState();
   const activeProfile = getActiveProfile(state);
 
+  await clearProxySettingsForProfile(activeProfile);
   await saveProfile({
     ...activeProfile,
     settings: {
@@ -180,7 +213,6 @@ async function disableActiveProfile(): Promise<void> {
     },
     lastError: undefined,
   });
-  await clearProxySettings();
 }
 
 function prepareProfileForSave(profile: ProxyProfile): ProxyProfile {
@@ -214,6 +246,22 @@ function getNextProfileName(state: ProxyProfilesState): string {
   }
 
   return name;
+}
+
+async function clearProxySettingsForProfile(profile: ProxyProfile): Promise<void> {
+  try {
+    await clearProxySettings();
+  } catch (error) {
+    await saveProfile({
+      ...profile,
+      lastError: getErrorMessage(error, 'Failed to clear proxy settings.'),
+    });
+    throw error;
+  }
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
 function ok<T>(data: T): RuntimeResponse<T> {
