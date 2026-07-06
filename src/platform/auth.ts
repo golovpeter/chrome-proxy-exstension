@@ -1,4 +1,4 @@
-import { loadCredentials } from './storage';
+import { getActiveProfile, loadProfilesState } from './storage';
 
 const attemptsByRequest = new Map<string, number>();
 const MAX_AUTH_ATTEMPTS = 1;
@@ -33,7 +33,7 @@ async function resolveAuthCredentials(
   }
 
   attemptsByRequest.set(details.requestId, attempts + 1);
-  const credentials = await loadCredentials();
+  const credentials = getActiveProfile(await loadProfilesState()).credentials;
 
   if (!credentials.username || !credentials.password) {
     return {};

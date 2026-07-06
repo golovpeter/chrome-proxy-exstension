@@ -52,7 +52,7 @@ describe('profile storage', () => {
     const state = await loadProfilesState();
 
     expect(state.activeProfileId).toBe('profile-a');
-    expect(state.profiles[0].name).toBe('A');
+    expect(state.profiles[0]!.name).toBe('A');
   });
 
   it('migrates legacy settings and credentials into a default profile', async () => {
@@ -72,9 +72,9 @@ describe('profile storage', () => {
 
     expect(state.version).toBe(2);
     expect(state.profiles).toHaveLength(1);
-    expect(state.profiles[0].name).toBe('Default');
-    expect(state.profiles[0].settings.proxies.http.host).toBe('proxy.example.com');
-    expect(state.profiles[0].credentials).toEqual({ username: 'legacy-user', password: 'legacy-pass' });
+    expect(state.profiles[0]!.name).toBe('Default');
+    expect(state.profiles[0]!.settings.proxies.http.host).toBe('proxy.example.com');
+    expect(state.profiles[0]!.credentials).toEqual({ username: 'legacy-user', password: 'legacy-pass' });
     expect(store.proxyProfilesState).toEqual(state);
   });
 });

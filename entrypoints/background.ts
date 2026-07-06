@@ -1,16 +1,16 @@
 import { parseBypassRules } from '../src/core/bypassRules';
-import type { ProxySettings } from '../src/core/settings';
-import { validateSettings } from '../src/core/validation';
+import { createDefaultProfile, profileToSettings, settingsToProfile, type ProxyProfile, type ProxyProfilesState } from '../src/core/settings';
+import { validateProfileSettings } from '../src/core/validation';
 import { registerAuthHandler } from '../src/platform/auth';
 import type { ExtensionState, RuntimeMessage, RuntimeResponse } from '../src/platform/messages';
 import { applyProxySettings, checkConnection, clearProxySettings } from '../src/platform/proxy';
 import {
-  clearCredentials,
-  loadSettings,
-  resetSettings,
-  saveCredentials,
-  saveSettings,
-  saveSettingsWithCredentials,
+  getActiveProfile,
+  loadProfilesState,
+  resetProfilesState,
+  saveProfile,
+  saveProfilesState,
+  selectProfile,
 } from '../src/platform/storage';
 
 export default defineBackground(() => {
@@ -32,25 +32,31 @@ async function handleMessage(message: RuntimeMessage): Promise<RuntimeResponse<u
   try {
     switch (message.type) {
       case 'GET_STATE':
-        return ok<ExtensionState>({ settings: await loadSettings() });
-      case 'SAVE_SETTINGS':
-        return ok<ExtensionState>({ settings: await saveAndMaybeApply(message.settings) });
-      case 'APPLY_SETTINGS':
-        await applyPersistedSettings();
-        return ok<ExtensionState>({ settings: await loadSettings() });
+        return ok(await loadExtensionState());
+      case 'SAVE_PROFILE':
+        await saveAndMaybeApplyProfile(message.profile);
+        return ok(await loadExtensionState());
+      case 'SELECT_PROFILE':
+        await selectAndApplyProfile(message.profileId);
+        return ok(await loadExtensionState());
+      case 'CREATE_PROFILE':
+        await createAndSelectProfile();
+        return ok(await loadExtensionState());
+      case 'DUPLICATE_PROFILE':
+        await duplicateAndSelectProfile(message.profileId);
+        return ok(await loadExtensionState());
+      case 'DELETE_PROFILE':
+        await deleteProfileAndMaybeReapply(message.profileId);
+        return ok(await loadExtensionState());
       case 'DISABLE_PROXY':
-        return ok<ExtensionState>({ settings: await disableProxy() });
+        await disableActiveProfile();
+        return ok(await loadExtensionState());
       case 'RESET_SETTINGS':
         await clearProxySettings();
-        return ok<ExtensionState>({ settings: await resetSettings() });
+        await resetProfilesState();
+        return ok(await loadExtensionState());
       case 'CHECK_CONNECTION':
         return ok(await checkConnection());
-      case 'SAVE_CREDENTIALS':
-        await saveCredentials(message.credentials);
-        return ok<ExtensionState>({ settings: await loadSettings() });
-      case 'CLEAR_CREDENTIALS':
-        await clearCredentials();
-        return ok<ExtensionState>({ settings: await loadSettings() });
       default:
         return fail('Unknown runtime message.');
     }
@@ -59,56 +65,155 @@ async function handleMessage(message: RuntimeMessage): Promise<RuntimeResponse<u
   }
 }
 
-async function saveAndMaybeApply(settings: ProxySettings): Promise<ProxySettings> {
-  const bypass = parseBypassRules(settings.bypassListRaw);
-  const next: ProxySettings = {
-    ...settings,
-    bypassList: bypass.rules,
-    lastError: undefined,
+async function loadExtensionState(): Promise<ExtensionState> {
+  const profilesState = await loadProfilesState();
+
+  return {
+    profilesState,
+    activeProfile: getActiveProfile(profilesState),
   };
-  const validation = validateSettings(next);
+}
 
-  if (!validation.valid) {
-    throw new Error(validation.errors.map((error) => error.message).join(' '));
+async function saveAndMaybeApplyProfile(profile: ProxyProfile): Promise<void> {
+  const state = await loadProfilesState();
+  const nextProfile = prepareProfileForSave(profile);
+
+  await saveProfile(nextProfile);
+
+  if (state.activeProfileId === nextProfile.id) {
+    await applyPersistedSettings();
   }
-
-  await saveSettingsWithCredentials(next);
-
-  await applyPersistedSettings();
-
-  return loadSettings();
 }
 
 async function applyPersistedSettings(): Promise<void> {
-  const settings = await loadSettings();
+  const state = await loadProfilesState();
+  const activeProfile = getActiveProfile(state);
 
-  if (!settings.enabled) {
+  if (!activeProfile.settings.enabled) {
     await clearProxySettings();
     return;
   }
 
   try {
-    await applyProxySettings(settings);
-    await saveSettings({ ...settings, lastAppliedAt: new Date().toISOString(), lastError: undefined });
+    await applyProxySettings(profileToSettings(activeProfile));
+    await saveProfile({
+      ...activeProfile,
+      lastAppliedAt: new Date().toISOString(),
+      lastError: undefined,
+    });
   } catch (error) {
-    await saveSettings({
-      ...settings,
+    await saveProfile({
+      ...activeProfile,
       lastError: error instanceof Error ? error.message : 'Failed to apply proxy settings.',
     });
   }
 }
 
-async function disableProxy(): Promise<ProxySettings> {
-  const settings = await loadSettings();
-  const next = {
-    ...settings,
-    enabled: false,
+async function selectAndApplyProfile(profileId: string): Promise<void> {
+  await selectProfile(profileId);
+  await applyPersistedSettings();
+}
+
+async function createAndSelectProfile(): Promise<void> {
+  const state = await loadProfilesState();
+  const profile = createDefaultProfile(getNextProfileName(state));
+
+  await saveProfile(profile);
+  await selectAndApplyProfile(profile.id);
+}
+
+async function duplicateAndSelectProfile(profileId: string): Promise<void> {
+  const state = await loadProfilesState();
+  const sourceProfile = state.profiles.find((profile) => profile.id === profileId);
+
+  if (!sourceProfile) {
+    throw new Error(`Profile "${profileId}" not found.`);
+  }
+
+  const duplicate = settingsToProfile(
+    {
+      ...profileToSettings(sourceProfile),
+      lastAppliedAt: undefined,
+      lastError: undefined,
+    },
+    `${sourceProfile.name} Copy`,
+  );
+
+  await saveProfile(duplicate);
+  await selectAndApplyProfile(duplicate.id);
+}
+
+async function deleteProfileAndMaybeReapply(profileId: string): Promise<void> {
+  const state = await loadProfilesState();
+
+  if (state.profiles.length === 1) {
+    throw new Error('Cannot delete the last remaining profile.');
+  }
+
+  if (!state.profiles.some((profile) => profile.id === profileId)) {
+    throw new Error(`Profile "${profileId}" not found.`);
+  }
+
+  const profiles = state.profiles.filter((profile) => profile.id !== profileId);
+  const nextActiveProfileId = state.activeProfileId === profileId ? profiles[0]!.id : state.activeProfileId;
+
+  await saveProfilesState({
+    version: 2,
+    activeProfileId: nextActiveProfileId,
+    profiles,
+  });
+
+  if (nextActiveProfileId !== state.activeProfileId) {
+    await applyPersistedSettings();
+  }
+}
+
+async function disableActiveProfile(): Promise<void> {
+  const state = await loadProfilesState();
+  const activeProfile = getActiveProfile(state);
+
+  await saveProfile({
+    ...activeProfile,
+    settings: {
+      ...activeProfile.settings,
+      enabled: false,
+    },
+    lastError: undefined,
+  });
+  await clearProxySettings();
+}
+
+function prepareProfileForSave(profile: ProxyProfile): ProxyProfile {
+  const bypass = parseBypassRules(profile.settings.bypassListRaw);
+  const nextProfile: ProxyProfile = {
+    ...profile,
+    settings: {
+      ...profile.settings,
+      bypassList: bypass.rules,
+    },
+    credentials: { ...profile.credentials },
     lastError: undefined,
   };
+  const validation = validateProfileSettings(nextProfile.settings);
 
-  await clearProxySettings();
-  await saveSettings(next);
-  return loadSettings();
+  if (!validation.valid) {
+    throw new Error(validation.errors.map((error) => error.message).join(' '));
+  }
+
+  return nextProfile;
+}
+
+function getNextProfileName(state: ProxyProfilesState): string {
+  const existingNames = new Set(state.profiles.map((profile) => profile.name));
+  let index = state.profiles.length + 1;
+  let name = `Profile ${index}`;
+
+  while (existingNames.has(name)) {
+    index += 1;
+    name = `Profile ${index}`;
+  }
+
+  return name;
 }
 
 function ok<T>(data: T): RuntimeResponse<T> {
