@@ -1,26 +1,45 @@
 import { parseBypassRules } from './bypassRules';
-import { DEFAULT_SETTINGS, type ActiveProxyMode, type ProxyMode, type ProxySettings, type SocksVersion } from './settings';
-import { validateSettings } from './validation';
+import {
+  createProfilesState,
+  DEFAULT_PROFILE_SETTINGS,
+  DEFAULT_SETTINGS,
+  normalizeProfilesState,
+  profileToSettings,
+  settingsToProfile,
+  type ActiveProxyMode,
+  type ProfileProxySettings,
+  type ProxyMode,
+  type ProxyProfile,
+  type ProxyProfilesState,
+  type ProxySettings,
+  type SocksVersion,
+} from './settings';
+import { validateProfileSettings, validateSettings } from './validation';
 
+export type ImportProfilesResult = { ok: true; state: ProxyProfilesState } | { ok: false; error: string };
 export type ImportSettingsResult = { ok: true; settings: ProxySettings } | { ok: false; error: string };
 
-type ExportableSettings = Omit<ProxySettings, 'credentials' | 'lastAppliedAt' | 'lastError'>;
+type ExportableProfile = Omit<ProxyProfile, 'credentials' | 'lastAppliedAt' | 'lastError'>;
+type ExportableProfilesState = Omit<ProxyProfilesState, 'profiles'> & {
+  profiles: ExportableProfile[];
+};
 
-export function exportSettings(settings: ProxySettings): string {
-  const exportable: ExportableSettings = {
-    enabled: settings.enabled,
-    activeMode: settings.activeMode,
-    proxyMode: settings.proxyMode,
-    proxies: settings.proxies,
-    socksVersion: settings.socksVersion,
-    bypassListRaw: settings.bypassListRaw,
-    bypassList: settings.bypassList,
+export function exportProfilesState(state: ProxyProfilesState): string {
+  const normalizedState = normalizeProfilesState(state);
+  const exportable: ExportableProfilesState = {
+    version: 2,
+    activeProfileId: normalizedState.activeProfileId,
+    profiles: normalizedState.profiles.map((profile) => ({
+      id: profile.id,
+      name: profile.name,
+      settings: profile.settings,
+    })),
   };
 
   return JSON.stringify(exportable, null, 2);
 }
 
-export function importSettings(json: string): ImportSettingsResult {
+export function importProfilesState(json: string): ImportProfilesResult {
   let parsed: unknown;
 
   try {
@@ -33,7 +52,49 @@ export function importSettings(json: string): ImportSettingsResult {
     return { ok: false, error: 'Import file must contain a settings object.' };
   }
 
-  const settings = mergeSettings(parsed);
+  if (isLegacySettingsRecord(parsed)) {
+    return importLegacySettings(parsed);
+  }
+
+  if (!Array.isArray(parsed.profiles)) {
+    return { ok: false, error: 'Import file must contain a profiles array.' };
+  }
+
+  const state = normalizeProfilesState({
+    version: 2,
+    activeProfileId: typeof parsed.activeProfileId === 'string' ? parsed.activeProfileId : '',
+    profiles: parsed.profiles.map((profile) => mergeProfile(profile)),
+  });
+  const validationError = validateProfilesState(state);
+
+  if (validationError) {
+    return { ok: false, error: validationError };
+  }
+
+  return { ok: true, state };
+}
+
+export function exportSettings(settings: ProxySettings): string {
+  return exportProfilesState(createProfilesState([settingsToProfile(settings, 'Default')]));
+}
+
+export function importSettings(json: string): ImportSettingsResult {
+  const result = importProfilesState(json);
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const activeProfile = result.state.profiles.find((profile) => profile.id === result.state.activeProfileId) ?? result.state.profiles[0]!;
+
+  return {
+    ok: true,
+    settings: profileToSettings(activeProfile),
+  };
+}
+
+function importLegacySettings(value: Record<string, unknown>): ImportProfilesResult {
+  const settings = mergeLegacySettings(value);
   const validation = validateSettings(settings);
 
   if (!validation.valid) {
@@ -43,19 +104,41 @@ export function importSettings(json: string): ImportSettingsResult {
     };
   }
 
-  return { ok: true, settings };
+  return {
+    ok: true,
+    state: createProfilesState([settingsToProfile(settings, 'Imported Profile')]),
+  };
 }
 
-function mergeSettings(value: Record<string, unknown>): ProxySettings {
-  const bypassListRaw = typeof value.bypassListRaw === 'string' ? value.bypassListRaw : DEFAULT_SETTINGS.bypassListRaw;
+function validateProfilesState(state: ProxyProfilesState): string | null {
+  const errors = state.profiles.flatMap((profile) =>
+    validateProfileSettings(profile.settings).errors.map((error) => `${profile.name}: ${error.message}`),
+  );
+
+  return errors.length > 0 ? errors.join(' ') : null;
+}
+
+function mergeProfile(value: unknown): ProxyProfile {
+  const profile = isRecord(value) ? value : {};
+
+  return {
+    id: typeof profile.id === 'string' ? profile.id : '',
+    name: typeof profile.name === 'string' ? profile.name : '',
+    settings: mergeProfileSettings(isRecord(profile.settings) ? profile.settings : {}),
+    credentials: { ...DEFAULT_SETTINGS.credentials },
+  };
+}
+
+function mergeProfileSettings(value: Record<string, unknown>): ProfileProxySettings {
+  const bypassListRaw = typeof value.bypassListRaw === 'string' ? value.bypassListRaw : DEFAULT_PROFILE_SETTINGS.bypassListRaw;
   const parsedBypass = parseBypassRules(bypassListRaw);
 
   return {
-    ...DEFAULT_SETTINGS,
-    enabled: typeof value.enabled === 'boolean' ? value.enabled : DEFAULT_SETTINGS.enabled,
-    activeMode: isActiveMode(value.activeMode) ? value.activeMode : DEFAULT_SETTINGS.activeMode,
-    proxyMode: isProxyMode(value.proxyMode) ? value.proxyMode : DEFAULT_SETTINGS.proxyMode,
-    socksVersion: isSocksVersion(value.socksVersion) ? value.socksVersion : DEFAULT_SETTINGS.socksVersion,
+    ...DEFAULT_PROFILE_SETTINGS,
+    enabled: typeof value.enabled === 'boolean' ? value.enabled : DEFAULT_PROFILE_SETTINGS.enabled,
+    activeMode: isActiveMode(value.activeMode) ? value.activeMode : DEFAULT_PROFILE_SETTINGS.activeMode,
+    proxyMode: isProxyMode(value.proxyMode) ? value.proxyMode : DEFAULT_PROFILE_SETTINGS.proxyMode,
+    socksVersion: isSocksVersion(value.socksVersion) ? value.socksVersion : DEFAULT_PROFILE_SETTINGS.socksVersion,
     proxies: {
       http: readEndpoint(value, 'http'),
       https: readEndpoint(value, 'https'),
@@ -63,8 +146,18 @@ function mergeSettings(value: Record<string, unknown>): ProxySettings {
     },
     bypassListRaw,
     bypassList: parsedBypass.rules,
-    credentials: DEFAULT_SETTINGS.credentials,
   };
+}
+
+function mergeLegacySettings(value: Record<string, unknown>): ProxySettings {
+  return {
+    ...mergeProfileSettings(value),
+    credentials: { ...DEFAULT_SETTINGS.credentials },
+  };
+}
+
+function isLegacySettingsRecord(value: Record<string, unknown>): boolean {
+  return !('profiles' in value) && 'proxies' in value;
 }
 
 function readEndpoint(value: Record<string, unknown>, key: ActiveProxyMode) {
