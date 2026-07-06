@@ -1,5 +1,5 @@
 import { parseBypassRules } from './bypassRules';
-import type { ActiveProxyMode, ProxyEndpoint, ProxySettings } from './settings';
+import type { ActiveProxyMode, ProfileProxySettings, ProxyEndpoint, ProxySettings } from './settings';
 
 export interface ValidationResult {
   valid: boolean;
@@ -58,9 +58,8 @@ export function validatePort(port: string): ValidationResult {
   return { valid: true };
 }
 
-export function validateSettings(settings: ProxySettings): SettingsValidationResult {
+export function validateProfileSettings(settings: ProfileProxySettings): SettingsValidationResult {
   const errors: FieldValidationError[] = [];
-  const warnings: FieldValidationError[] = [];
   const modes = settings.proxyMode === 'singleProxy' ? [settings.activeMode] : (['http', 'https', 'socks'] satisfies ActiveProxyMode[]);
 
   if (settings.enabled) {
@@ -74,13 +73,23 @@ export function validateSettings(settings: ProxySettings): SettingsValidationRes
     errors.push({ field: 'bypassListRaw', message: `${error.value}: ${error.message}` });
   }
 
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings: [],
+  };
+}
+
+export function validateSettings(settings: ProxySettings): SettingsValidationResult {
+  const result = validateProfileSettings(settings);
+  const warnings = [...result.warnings];
+
   if (settings.enabled && !settings.credentials.username && settings.credentials.password) {
     warnings.push({ field: 'credentials.username', message: 'Username is empty while password is set.' });
   }
 
   return {
-    valid: errors.length === 0,
-    errors,
+    ...result,
     warnings,
   };
 }
