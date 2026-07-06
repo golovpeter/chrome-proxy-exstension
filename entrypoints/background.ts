@@ -48,6 +48,9 @@ async function handleMessage(message: RuntimeMessage): Promise<RuntimeResponse<u
       case 'DELETE_PROFILE':
         await deleteProfileAndMaybeReapply(message.profileId);
         return ok(await loadExtensionState());
+      case 'REPLACE_PROFILES_STATE':
+        await replaceProfilesState(message.profilesState);
+        return ok(await loadExtensionState());
       case 'DISABLE_PROXY':
         await disableActiveProfile();
         return ok(await loadExtensionState());
@@ -198,6 +201,11 @@ async function deleteProfileAndMaybeReapply(profileId: string): Promise<void> {
   if (activeProfileChanged) {
     await applyPersistedSettings();
   }
+}
+
+async function replaceProfilesState(state: ProxyProfilesState): Promise<void> {
+  await saveProfilesState(state);
+  await applyPersistedSettings();
 }
 
 async function disableActiveProfile(): Promise<void> {

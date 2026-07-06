@@ -7,6 +7,7 @@ export type RuntimeMessage =
   | { type: 'DUPLICATE_PROFILE'; profileId: string }
   | { type: 'DELETE_PROFILE'; profileId: string }
   | { type: 'SELECT_PROFILE'; profileId: string }
+  | { type: 'REPLACE_PROFILES_STATE'; profilesState: ProxyProfilesState }
   | { type: 'DISABLE_PROXY' }
   | { type: 'RESET_SETTINGS' }
   | { type: 'CHECK_CONNECTION' };

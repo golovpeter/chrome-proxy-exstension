@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseBypassRules } from '../../src/core/bypassRules';
-import { exportSettings, importSettings } from '../../src/core/importExport';
-import { DEFAULT_SETTINGS, type ActiveProxyMode, type ProxySettings, type SocksVersion } from '../../src/core/settings';
-import { validateHost, validatePort, validateSettings } from '../../src/core/validation';
+import { exportProfilesState, importProfilesState } from '../../src/core/importExport';
+import {
+  DEFAULT_SETTINGS,
+  normalizeProfilesState,
+  type ActiveProxyMode,
+  type ProxyProfile,
+  type ProxyProfilesState,
+  type SocksVersion,
+} from '../../src/core/settings';
+import { validateHost, validatePort, validateProfileSettings } from '../../src/core/validation';
 import { sendRuntimeMessage, type ExtensionState } from '../../src/platform/messages';
 import { Button, Field, SectionHeader, SegmentedControl, StatusBanner, TextAreaField } from '../../src/ui/components';
 
@@ -17,16 +24,26 @@ const sections: { id: SectionId; label: string }[] = [
 
 export function App() {
   const [activeSection, setActiveSection] = useState<SectionId>('proxy');
-  const [settings, setSettings] = useState<ProxySettings>(DEFAULT_SETTINGS);
+  const [profilesState, setProfilesState] = useState<ProxyProfilesState | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState('');
   const [status, setStatus] = useState<{ tone: 'info' | 'success' | 'error' | 'warning'; message: string }>({
     tone: 'info',
-    message: 'Loading settings...',
+    message: 'Loading profiles...',
   });
   const [busy, setBusy] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const validation = useMemo(() => validateSettings(settings), [settings]);
-  const bypassPreview = useMemo(() => parseBypassRules(settings.bypassListRaw), [settings.bypassListRaw]);
+  const selectedProfile = useMemo(() => {
+    return profilesState?.profiles.find((profile) => profile.id === selectedProfileId) ?? profilesState?.profiles[0] ?? null;
+  }, [profilesState, selectedProfileId]);
+  const validation = useMemo(
+    () => (selectedProfile ? validateProfileSettings(selectedProfile.settings) : { valid: false, errors: [], warnings: [] }),
+    [selectedProfile],
+  );
+  const bypassPreview = useMemo(
+    () => parseBypassRules(selectedProfile?.settings.bypassListRaw ?? DEFAULT_SETTINGS.bypassListRaw),
+    [selectedProfile?.settings.bypassListRaw],
+  );
   const errorsByField = useMemo(() => {
     return new Map(validation.errors.map((error) => [error.field, error.message]));
   }, [validation.errors]);
@@ -38,23 +55,163 @@ export function App() {
   async function loadState() {
     const response = await sendRuntimeMessage<ExtensionState>({ type: 'GET_STATE' });
     if (response.ok) {
-      setSettings(response.data.settings);
-      setStatus({ tone: 'info', message: response.data.settings.enabled ? 'Proxy is enabled.' : 'Proxy is disabled.' });
+      applyExtensionState(response.data);
+      setStatus({
+        tone: response.data.activeProfile.lastError ? 'error' : 'info',
+        message: getProfileStatus(response.data.activeProfile),
+      });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
   }
 
-  async function saveProxySettings(nextSettings = settings, options: { enable?: boolean } = {}) {
-    const settingsToSave = options.enable === undefined ? nextSettings : { ...nextSettings, enabled: options.enable };
+  function applyExtensionState(state: ExtensionState) {
+    setProfilesState(state.profilesState);
+    setSelectedProfileId(state.activeProfile.id);
+  }
+
+  function updateProfilesState(nextState: ProxyProfilesState) {
+    const normalized = normalizeProfilesState(nextState);
+    setProfilesState(normalized);
+    setSelectedProfileId((current) =>
+      normalized.profiles.some((profile) => profile.id === current) ? current : normalized.activeProfileId,
+    );
+  }
+
+  function updateSelectedProfile(updater: (profile: ProxyProfile) => ProxyProfile) {
+    if (!profilesState || !selectedProfile) {
+      return;
+    }
+
+    updateProfilesState({
+      ...profilesState,
+      profiles: profilesState.profiles.map((profile) => (profile.id === selectedProfile.id ? updater(profile) : profile)),
+    });
+  }
+
+  function updateProfileSettings(patch: Partial<ProxyProfile['settings']>) {
+    updateSelectedProfile((profile) => ({
+      ...profile,
+      settings: {
+        ...profile.settings,
+        ...patch,
+      },
+    }));
+  }
+
+  function updateProxy(mode: ActiveProxyMode, field: 'host' | 'port', value: string) {
+    updateSelectedProfile((profile) => ({
+      ...profile,
+      settings: {
+        ...profile.settings,
+        proxies: {
+          ...profile.settings.proxies,
+          [mode]: {
+            ...profile.settings.proxies[mode],
+            [field]: value,
+          },
+        },
+      },
+    }));
+  }
+
+  async function saveSelectedProfile(options: { enable?: boolean; successMessage?: string } = {}) {
+    if (!selectedProfile) {
+      return;
+    }
+
+    const profileToSave =
+      options.enable === undefined
+        ? selectedProfile
+        : {
+            ...selectedProfile,
+            settings: {
+              ...selectedProfile.settings,
+              enabled: options.enable,
+            },
+          };
 
     setBusy(true);
-    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: settingsToSave });
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_PROFILE', profile: profileToSave });
     setBusy(false);
 
     if (response.ok) {
-      setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Settings and credentials saved and applied.' });
+      applyExtensionState(response.data);
+      setStatus({ tone: 'success', message: options.successMessage ?? `${profileToSave.name} saved.` });
+    } else {
+      setStatus({ tone: 'error', message: response.error });
+    }
+  }
+
+  async function selectProfile(profileId: string) {
+    if (!profilesState) {
+      return;
+    }
+
+    setSelectedProfileId(profileId);
+
+    if (profileId === profilesState.activeProfileId) {
+      return;
+    }
+
+    setBusy(true);
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SELECT_PROFILE', profileId });
+    setBusy(false);
+
+    if (response.ok) {
+      applyExtensionState(response.data);
+      setStatus({ tone: 'success', message: `${response.data.activeProfile.name} selected.` });
+    } else {
+      setStatus({ tone: 'error', message: response.error });
+    }
+  }
+
+  async function createProfile() {
+    setBusy(true);
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'CREATE_PROFILE' });
+    setBusy(false);
+
+    if (response.ok) {
+      applyExtensionState(response.data);
+      setStatus({ tone: 'success', message: `${response.data.activeProfile.name} created.` });
+    } else {
+      setStatus({ tone: 'error', message: response.error });
+    }
+  }
+
+  async function duplicateProfile() {
+    if (!selectedProfile) {
+      return;
+    }
+
+    setBusy(true);
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'DUPLICATE_PROFILE', profileId: selectedProfile.id });
+    setBusy(false);
+
+    if (response.ok) {
+      applyExtensionState(response.data);
+      setStatus({ tone: 'success', message: `${response.data.activeProfile.name} created.` });
+    } else {
+      setStatus({ tone: 'error', message: response.error });
+    }
+  }
+
+  async function deleteProfile() {
+    if (!profilesState || !selectedProfile || profilesState.profiles.length === 1) {
+      return;
+    }
+
+    if (!confirm(`Delete profile "${selectedProfile.name}"?`)) {
+      return;
+    }
+
+    setBusy(true);
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'DELETE_PROFILE', profileId: selectedProfile.id });
+    setBusy(false);
+
+    if (response.ok) {
+      applyExtensionState(response.data);
+      setStatus({ tone: 'success', message: 'Profile deleted.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
@@ -66,16 +223,26 @@ export function App() {
     setBusy(false);
 
     if (response.ok) {
-      setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Proxy disabled.' });
+      applyExtensionState(response.data);
+      setStatus({ tone: 'success', message: `${response.data.activeProfile.name} disabled.` });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
   }
 
   async function checkConnection() {
-    const settingsToCheck = { ...settings, enabled: true };
-    const currentValidation = validateSettings(settingsToCheck);
+    if (!selectedProfile) {
+      return;
+    }
+
+    const profileToCheck: ProxyProfile = {
+      ...selectedProfile,
+      settings: {
+        ...selectedProfile.settings,
+        enabled: true,
+      },
+    };
+    const currentValidation = validateProfileSettings(profileToCheck.settings);
 
     if (!currentValidation.valid) {
       setStatus({ tone: 'error', message: currentValidation.errors.map((error) => error.message).join(' ') });
@@ -83,8 +250,8 @@ export function App() {
     }
 
     setBusy(true);
-    setStatus({ tone: 'info', message: 'Saving and applying current configuration before check...' });
-    const saveResponse = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: settingsToCheck });
+    setStatus({ tone: 'info', message: `Saving and applying ${selectedProfile.name} before check...` });
+    const saveResponse = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_PROFILE', profile: profileToCheck });
 
     if (!saveResponse.ok) {
       setBusy(false);
@@ -92,10 +259,10 @@ export function App() {
       return;
     }
 
-    setSettings(saveResponse.data.settings);
-    if (saveResponse.data.settings.lastError) {
+    applyExtensionState(saveResponse.data);
+    if (saveResponse.data.activeProfile.lastError) {
       setBusy(false);
-      setStatus({ tone: 'error', message: saveResponse.data.settings.lastError });
+      setStatus({ tone: 'error', message: saveResponse.data.activeProfile.lastError });
       return;
     }
 
@@ -115,37 +282,30 @@ export function App() {
     setStatus({ tone: 'success', message: 'Connection check passed successfully.' });
   }
 
-  async function saveCredentials() {
-    setBusy(true);
-    const response = await sendRuntimeMessage<ExtensionState>({
-      type: 'SAVE_CREDENTIALS',
-      credentials: settings.credentials,
-    });
-    setBusy(false);
-
-    if (response.ok) {
-      setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Credentials saved locally.' });
-    } else {
-      setStatus({ tone: 'error', message: response.error });
-    }
-  }
-
   async function clearCredentials() {
+    if (!selectedProfile) {
+      return;
+    }
+
+    const profileToSave: ProxyProfile = {
+      ...selectedProfile,
+      credentials: { username: '', password: '' },
+    };
+
     setBusy(true);
-    const response = await sendRuntimeMessage<ExtensionState>({ type: 'CLEAR_CREDENTIALS' });
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_PROFILE', profile: profileToSave });
     setBusy(false);
 
     if (response.ok) {
-      setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Credentials cleared.' });
+      applyExtensionState(response.data);
+      setStatus({ tone: 'success', message: `${profileToSave.name} credentials cleared.` });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
   }
 
   async function resetSettings() {
-    if (!confirm('Reset all settings and credentials?')) {
+    if (!confirm('Reset all profiles and credentials?')) {
       return;
     }
 
@@ -154,36 +314,23 @@ export function App() {
     setBusy(false);
 
     if (response.ok) {
-      setSettings(response.data.settings);
-      setStatus({ tone: 'success', message: 'Settings reset to defaults.' });
+      applyExtensionState(response.data);
+      setStatus({ tone: 'success', message: 'Profiles reset to defaults.' });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
   }
 
-  function updateSettings(patch: Partial<ProxySettings>) {
-    setSettings((current) => ({ ...current, ...patch }));
-  }
-
-  function updateProxy(mode: ActiveProxyMode, field: 'host' | 'port', value: string) {
-    setSettings((current) => ({
-      ...current,
-      proxies: {
-        ...current.proxies,
-        [mode]: {
-          ...current.proxies[mode],
-          [field]: value,
-        },
-      },
-    }));
-  }
-
   function handleExport() {
-    const blob = new Blob([exportSettings(settings)], { type: 'application/json' });
+    if (!profilesState) {
+      return;
+    }
+
+    const blob = new Blob([exportProfilesState(profilesState)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'chrome-proxy-manager-settings.json';
+    anchor.download = 'chrome-proxy-manager-profiles.json';
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -193,18 +340,33 @@ export function App() {
       return;
     }
 
-    const result = importSettings(await file.text());
+    const result = importProfilesState(await file.text());
     if (!result.ok) {
       setStatus({ tone: 'error', message: result.error });
       return;
     }
 
-    setSettings(result.settings);
-    setStatus({ tone: 'success', message: 'Settings imported. Click "Save" to apply.' });
+    setBusy(true);
+    const response = await sendRuntimeMessage<ExtensionState>({
+      type: 'REPLACE_PROFILES_STATE',
+      profilesState: result.state,
+    });
+    setBusy(false);
+
+    if (response.ok) {
+      applyExtensionState(response.data);
+      setStatus({ tone: 'warning', message: 'Profiles imported. Credentials were not imported; re-enter them per profile.' });
+    } else {
+      setStatus({ tone: 'error', message: response.error });
+    }
   }
 
-  const activeEndpoint = settings.proxies[settings.activeMode];
-  const hasActiveProxy = activeEndpoint.host && activeEndpoint.port;
+  const activeProfile = profilesState?.profiles.find((profile) => profile.id === profilesState.activeProfileId) ?? null;
+  const settings = selectedProfile?.settings;
+  const activeEndpoint = settings?.proxies[settings.activeMode];
+  const hasActiveProxy = Boolean(activeEndpoint?.host && activeEndpoint.port);
+  const canDeleteProfile = Boolean(profilesState && profilesState.profiles.length > 1 && selectedProfile);
+  const isSelectedActive = Boolean(profilesState && selectedProfile?.id === profilesState.activeProfileId);
 
   return (
     <div className="app-shell">
@@ -233,12 +395,49 @@ export function App() {
       <main className="content">
         <StatusBanner tone={status.tone}>{status.message}</StatusBanner>
 
-        {activeSection === 'proxy' ? (
+        {activeSection === 'proxy' && selectedProfile && settings ? (
           <section className="panel">
             <SectionHeader
               title="Proxy"
-              description="Configure HTTP, HTTPS, and SOCKS proxies. In singleProxy mode, the selected active mode is used."
+              description="Manage saved proxy profiles. The active profile is the one applied by Chrome."
             />
+
+            <section className="profile-card" aria-label="Profile management">
+              <div className="profile-row">
+                <label className="field">
+                  <span>Selected profile</span>
+                  <select
+                    value={selectedProfile.id}
+                    disabled={busy}
+                    onChange={(event) => void selectProfile(event.target.value)}
+                  >
+                    {profilesState?.profiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                        {profile.id === profilesState.activeProfileId ? ' (active)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <small>{isSelectedActive ? 'Active in Chrome' : `Active: ${activeProfile?.name ?? 'Unknown'}`}</small>
+                </label>
+                <Field
+                  label="Profile name"
+                  value={selectedProfile.name}
+                  onChange={(event) => updateSelectedProfile((profile) => ({ ...profile, name: event.target.value }))}
+                />
+              </div>
+              <div className="actions profile-actions">
+                <Button disabled={busy} onClick={() => void createProfile()}>
+                  Add
+                </Button>
+                <Button disabled={busy || !selectedProfile} onClick={() => void duplicateProfile()}>
+                  Duplicate
+                </Button>
+                <Button variant="danger" disabled={busy || !canDeleteProfile} onClick={() => void deleteProfile()}>
+                  Delete
+                </Button>
+              </div>
+            </section>
 
             <div className="control-grid">
               <SegmentedControl
@@ -249,7 +448,7 @@ export function App() {
                   { value: 'https', label: 'HTTPS' },
                   { value: 'socks', label: 'SOCKS' },
                 ]}
-                onChange={(value) => updateSettings({ activeMode: value })}
+                onChange={(value) => updateProfileSettings({ activeMode: value })}
               />
               <SegmentedControl
                 label="Proxy mode"
@@ -258,7 +457,7 @@ export function App() {
                   { value: 'singleProxy', label: 'Single proxy' },
                   { value: 'perProtocol', label: 'Per protocol' },
                 ]}
-                onChange={(value) => updateSettings({ proxyMode: value })}
+                onChange={(value) => updateProfileSettings({ proxyMode: value })}
               />
               <SegmentedControl
                 label="SOCKS"
@@ -267,16 +466,20 @@ export function App() {
                   { value: 'socks4', label: 'SOCKS4' },
                   { value: 'socks5', label: 'SOCKS5' },
                 ]}
-                onChange={(value: SocksVersion) => updateSettings({ socksVersion: value })}
+                onChange={(value: SocksVersion) => updateProfileSettings({ socksVersion: value })}
               />
             </div>
 
-            <ProxyFields mode="http" title="HTTP Proxy" settings={settings} errors={errorsByField} onChange={updateProxy} />
-            <ProxyFields mode="https" title="HTTPS Proxy" settings={settings} errors={errorsByField} onChange={updateProxy} />
-            <ProxyFields mode="socks" title="SOCKS Proxy" settings={settings} errors={errorsByField} onChange={updateProxy} />
+            <ProxyFields mode="http" title="HTTP Proxy" profile={selectedProfile} errors={errorsByField} onChange={updateProxy} />
+            <ProxyFields mode="https" title="HTTPS Proxy" profile={selectedProfile} errors={errorsByField} onChange={updateProxy} />
+            <ProxyFields mode="socks" title="SOCKS Proxy" profile={selectedProfile} errors={errorsByField} onChange={updateProxy} />
 
             <div className="actions">
-              <Button variant="primary" disabled={busy || !validateSettings({ ...settings, enabled: true }).valid} onClick={() => void saveProxySettings(settings, { enable: true })}>
+              <Button
+                variant="primary"
+                disabled={busy || !validateProfileSettings({ ...settings, enabled: true }).valid}
+                onClick={() => void saveSelectedProfile({ enable: true, successMessage: `${selectedProfile.name} saved and enabled.` })}
+              >
                 Save
               </Button>
               <Button disabled={busy || !hasActiveProxy} onClick={() => void checkConnection()}>
@@ -289,17 +492,17 @@ export function App() {
           </section>
         ) : null}
 
-        {activeSection === 'rules' ? (
+        {activeSection === 'rules' && selectedProfile ? (
           <section className="panel">
             <SectionHeader
               title="Bypass Rules"
-              description="Sites, IPs, CIDR ranges, and domain patterns that bypass the proxy."
+              description={`Sites, IPs, CIDR ranges, and domain patterns that bypass ${selectedProfile.name}.`}
             />
             <TextAreaField
               label="Bypass list"
-              value={settings.bypassListRaw}
+              value={selectedProfile.settings.bypassListRaw}
               rows={7}
-              onChange={(event) => updateSettings({ bypassListRaw: event.target.value })}
+              onChange={(event) => updateProfileSettings({ bypassListRaw: event.target.value })}
               error={errorsByField.get('bypassListRaw')}
               hint="Comma-separated. Examples: <local>, 192.168.0.0/16, *.example.com, example.com:99"
             />
@@ -308,38 +511,44 @@ export function App() {
               <code>{bypassPreview.rules.length ? bypassPreview.rules.join(', ') : 'No valid rules yet'}</code>
             </div>
             <div className="actions">
-              <Button variant="primary" disabled={busy || !validation.valid} onClick={() => void saveProxySettings()}>
+              <Button variant="primary" disabled={busy || !validation.valid} onClick={() => void saveSelectedProfile()}>
                 Save
               </Button>
             </div>
           </section>
         ) : null}
 
-        {activeSection === 'auth' ? (
+        {activeSection === 'auth' && selectedProfile ? (
           <section className="panel">
             <SectionHeader
               title="Authentication"
-              description="Credentials are applied by the background service worker on proxy auth challenges."
+              description={`Credentials are saved only for ${selectedProfile.name}.`}
             />
             <div className="form-grid">
               <Field
                 label="Username"
-                value={settings.credentials.username}
+                value={selectedProfile.credentials.username}
                 onChange={(event) =>
-                  updateSettings({ credentials: { ...settings.credentials, username: event.target.value } })
+                  updateSelectedProfile((profile) => ({
+                    ...profile,
+                    credentials: { ...profile.credentials, username: event.target.value },
+                  }))
                 }
               />
               <Field
                 label="Password"
                 type="password"
-                value={settings.credentials.password}
+                value={selectedProfile.credentials.password}
                 onChange={(event) =>
-                  updateSettings({ credentials: { ...settings.credentials, password: event.target.value } })
+                  updateSelectedProfile((profile) => ({
+                    ...profile,
+                    credentials: { ...profile.credentials, password: event.target.value },
+                  }))
                 }
               />
             </div>
             <div className="actions">
-              <Button variant="primary" disabled={busy} onClick={() => void saveCredentials()}>
+              <Button variant="primary" disabled={busy} onClick={() => void saveSelectedProfile({ successMessage: `${selectedProfile.name} credentials saved.` })}>
                 Save Credentials
               </Button>
               <Button variant="danger" disabled={busy} onClick={() => void clearCredentials()}>
@@ -351,7 +560,7 @@ export function App() {
 
         {activeSection === 'about' ? (
           <section className="panel">
-            <SectionHeader title="About" description="Chrome Manifest V3 extension for browser proxy management." />
+            <SectionHeader title="About" description="Chrome Manifest V3 extension for browser proxy profile management." />
             <div className="info-grid">
               <div>
                 <strong>Permissions</strong>
@@ -359,7 +568,7 @@ export function App() {
               </div>
               <div>
                 <strong>Manifest V3</strong>
-                <p>The service worker may be suspended by Chrome; settings are reapplied when the background starts.</p>
+                <p>The service worker may be suspended by Chrome; the active profile is reapplied when the background starts.</p>
               </div>
               <div>
                 <strong>Connection check</strong>
@@ -367,10 +576,12 @@ export function App() {
               </div>
             </div>
             <div className="actions">
-              <Button onClick={handleExport}>Export JSON</Button>
+              <Button disabled={!profilesState} onClick={handleExport}>
+                Export JSON
+              </Button>
               <Button onClick={() => importInputRef.current?.click()}>Import JSON</Button>
               <Button variant="danger" disabled={busy} onClick={() => void resetSettings()}>
-                Reset Settings
+                Reset Profiles
               </Button>
               <input
                 ref={importInputRef}
@@ -390,25 +601,27 @@ export function App() {
 function ProxyFields({
   mode,
   title,
-  settings,
+  profile,
   errors,
   onChange,
 }: {
   mode: ActiveProxyMode;
   title: string;
-  settings: ProxySettings;
+  profile: ProxyProfile;
   errors: Map<string, string>;
   onChange: (mode: ActiveProxyMode, field: 'host' | 'port', value: string) => void;
 }) {
-  const endpoint = settings.proxies[mode];
-  const hostError = validateHost(endpoint.host).valid ? errors.get(`proxies.${mode}.host`) : validateHost(endpoint.host).message;
-  const portError = validatePort(endpoint.port).valid ? errors.get(`proxies.${mode}.port`) : validatePort(endpoint.port).message;
+  const endpoint = profile.settings.proxies[mode];
+  const hostValidation = validateHost(endpoint.host);
+  const portValidation = validatePort(endpoint.port);
+  const hostError = hostValidation.valid ? errors.get(`proxies.${mode}.host`) : hostValidation.message;
+  const portError = portValidation.valid ? errors.get(`proxies.${mode}.port`) : portValidation.message;
 
   return (
     <section className="proxy-card">
       <div>
         <h2>{title}</h2>
-        <p>{mode === 'socks' ? `Using ${settings.socksVersion}` : `Scheme: ${mode}`}</p>
+        <p>{mode === 'socks' ? `Using ${profile.settings.socksVersion}` : `Scheme: ${mode}`}</p>
       </div>
       <div className="form-grid">
         <Field label="Host" value={endpoint.host} error={hostError} onChange={(event) => onChange(mode, 'host', event.target.value)} />
@@ -416,4 +629,12 @@ function ProxyFields({
       </div>
     </section>
   );
+}
+
+function getProfileStatus(profile: ProxyProfile): string {
+  if (profile.lastError) {
+    return profile.lastError;
+  }
+
+  return profile.settings.enabled ? `${profile.name} is enabled.` : `${profile.name} is disabled.`;
 }
