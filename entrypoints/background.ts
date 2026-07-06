@@ -17,10 +17,10 @@ export default defineBackground(() => {
   registerAuthHandler();
 
   chrome.runtime.onInstalled.addListener(() => {
-    void applyPersistedSettings();
+    void applyPersistedSettingsOnStartup();
   });
 
-  void applyPersistedSettings();
+  void applyPersistedSettingsOnStartup();
 
   chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResponse) => {
     void handleMessage(message).then(sendResponse);
@@ -116,6 +116,14 @@ async function applyPersistedSettings(): Promise<void> {
       ...activeProfile,
       lastError: getErrorMessage(error, 'Failed to apply proxy settings.'),
     });
+  }
+}
+
+async function applyPersistedSettingsOnStartup(): Promise<void> {
+  try {
+    await applyPersistedSettings();
+  } catch {
+    // applyPersistedSettings records profile-level errors before rethrowing.
   }
 }
 
