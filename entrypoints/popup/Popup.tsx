@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ActiveProxyMode, ProxySettings } from '../../src/core/settings';
+import type { ActiveProxyMode, ProxyProfile, ProxyProfilesState } from '../../src/core/settings';
 import { sendRuntimeMessage, type ExtensionState } from '../../src/platform/messages';
 
 const modes: { value: ActiveProxyMode; label: string }[] = [
@@ -9,7 +9,8 @@ const modes: { value: ActiveProxyMode; label: string }[] = [
 ];
 
 export function Popup() {
-  const [settings, setSettings] = useState<ProxySettings | null>(null);
+  const [profilesState, setProfilesState] = useState<ProxyProfilesState | null>(null);
+  const [activeProfile, setActiveProfile] = useState<ProxyProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -18,43 +19,68 @@ export function Popup() {
   }, []);
 
   const currentProxy = useMemo(() => {
-    if (!settings) {
-      return 'No proxy loaded';
+    if (!activeProfile) {
+      return 'No profile loaded';
     }
 
-    if (!settings.enabled) {
+    if (!activeProfile.settings.enabled) {
       return 'Proxy disabled';
     }
 
-    const endpoint = settings.proxies[settings.activeMode];
+    const endpoint = activeProfile.settings.proxies[activeProfile.settings.activeMode];
     return endpoint.host && endpoint.port ? `${endpoint.host}:${endpoint.port}` : 'Proxy not configured';
-  }, [settings]);
+  }, [activeProfile]);
 
   async function loadState() {
     const response = await sendRuntimeMessage<ExtensionState>({ type: 'GET_STATE' });
 
     if (response.ok) {
-      setSettings(response.data.settings);
-      setError(response.data.settings.lastError ?? null);
+      applyExtensionState(response.data);
+    } else {
+      setError(response.error);
+    }
+  }
+
+  function applyExtensionState(state: ExtensionState) {
+    setProfilesState(state.profilesState);
+    setActiveProfile(state.activeProfile);
+    setError(state.activeProfile.lastError ?? null);
+  }
+
+  async function selectProfile(profileId: string) {
+    setBusy(true);
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SELECT_PROFILE', profileId });
+    setBusy(false);
+
+    if (response.ok) {
+      applyExtensionState(response.data);
     } else {
       setError(response.error);
     }
   }
 
   async function selectMode(activeMode: ActiveProxyMode) {
-    if (!settings) {
+    if (!activeProfile) {
       return;
     }
 
-    const next = { ...settings, enabled: true, activeMode, proxyMode: 'singleProxy' as const };
-    setSettings(next);
+    const next: ProxyProfile = {
+      ...activeProfile,
+      settings: {
+        ...activeProfile.settings,
+        enabled: true,
+        activeMode,
+        proxyMode: 'singleProxy',
+      },
+    };
+
+    setActiveProfile(next);
     setBusy(true);
-    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_SETTINGS', settings: next });
+    const response = await sendRuntimeMessage<ExtensionState>({ type: 'SAVE_PROFILE', profile: next });
     setBusy(false);
 
     if (response.ok) {
-      setSettings(response.data.settings);
-      setError(response.data.settings.lastError ?? null);
+      applyExtensionState(response.data);
     } else {
       setError(response.error);
     }
@@ -66,8 +92,7 @@ export function Popup() {
     setBusy(false);
 
     if (response.ok) {
-      setSettings(response.data.settings);
-      setError(null);
+      applyExtensionState(response.data);
     } else {
       setError(response.error);
     }
@@ -77,7 +102,7 @@ export function Popup() {
     chrome.runtime.openOptionsPage();
   }
 
-  const enabled = settings?.enabled ?? false;
+  const enabled = activeProfile?.settings.enabled ?? false;
 
   return (
     <main className="popup">
@@ -94,19 +119,35 @@ export function Popup() {
       </header>
 
       {error ? <div className="notice">{error}</div> : null}
+
+      <label className="profile-select">
+        <span>Profile</span>
+        <select
+          value={activeProfile?.id ?? ''}
+          disabled={busy || !profilesState}
+          onChange={(event) => void selectProfile(event.target.value)}
+        >
+          {profilesState?.profiles.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {profile.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <section className="mode-picker" aria-label="Active proxy mode">
         {modes.map((mode) => (
           <button
             key={mode.value}
             type="button"
-            aria-pressed={enabled && settings?.activeMode === mode.value}
-            disabled={busy || !settings}
+            aria-pressed={enabled && activeProfile?.settings.activeMode === mode.value}
+            disabled={busy || !activeProfile}
             onClick={() => void selectMode(mode.value)}
           >
             {mode.label}
           </button>
         ))}
-        <button type="button" aria-pressed={!enabled} disabled={busy || !settings} onClick={() => void disableProxy()}>
+        <button type="button" aria-pressed={!enabled} disabled={busy || !activeProfile} onClick={() => void disableProxy()}>
           Disabled
         </button>
         <button type="button" className="dashboard-link" onClick={openDashboard}>
@@ -115,7 +156,7 @@ export function Popup() {
       </section>
 
       <section className="proxy-summary">
-        <span>Current proxy</span>
+        <span>{activeProfile?.name ?? 'Current profile'}</span>
         <strong>{currentProxy}</strong>
       </section>
     </main>

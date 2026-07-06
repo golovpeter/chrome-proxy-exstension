@@ -18,7 +18,8 @@ body {
   background: #ffffff;
 }
 
-button {
+button,
+select {
   font: inherit;
 }
 
@@ -90,6 +91,34 @@ h1 {
   border-color: #d7dfea;
   background: #f7f9fc;
   color: #475467;
+}
+
+.profile-select {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.profile-select span {
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-select select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #cfd6e2;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #172033;
+  padding: 7px 9px;
+  outline: none;
+}
+
+.profile-select select:focus {
+  border-color: #46627f;
+  box-shadow: 0 0 0 3px rgba(70, 98, 127, 0.12);
 }
 
 .mode-picker {
