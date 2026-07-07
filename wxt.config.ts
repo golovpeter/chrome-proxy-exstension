@@ -6,7 +6,7 @@ export default defineConfig({
   manifest: {
     name: 'Chrome Proxy Manager',
     description: 'Route Chrome traffic through HTTP, HTTPS, or SOCKS proxies.',
-    version: '1.0.1',
+    version: '1.1.0',
     permissions: ['proxy', 'storage', 'webRequest', 'webRequestAuthProvider'],
     host_permissions: ['<all_urls>'],
     icons: {
