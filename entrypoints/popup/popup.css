@@ -93,42 +93,97 @@ h1 {
   color: #475467;
 }
 
-.profile-select {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.profile-select span {
+.popup-label {
   color: #344054;
   font-size: 12px;
   font-weight: 700;
 }
 
-.profile-select select {
-  width: 100%;
-  min-height: 36px;
-  border: 1px solid #cfd6e2;
-  border-radius: 7px;
-  background: #ffffff;
-  color: #172033;
-  padding: 7px 9px;
-  outline: none;
+.profile-list {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  max-height: 208px;
+  overflow-y: auto;
 }
 
-.profile-select select:focus {
-  border-color: #46627f;
-  box-shadow: 0 0 0 3px rgba(70, 98, 127, 0.12);
+.profile-list button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cfd6e2;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.profile-list button:hover:not(:disabled):not([aria-pressed="true"]) {
+  border-color: #9aa8bf;
+  background: #f7f9fc;
+}
+
+.profile-list button[aria-pressed="true"] {
+  border-color: #24364b;
+  background: #f4f7fb;
+  box-shadow: inset 0 0 0 1px #24364b;
+}
+
+.profile-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd3e1;
+}
+
+.profile-dot.on {
+  background: #12b76a;
+}
+
+.profile-item-text {
+  display: grid;
+  min-width: 0;
+}
+
+.profile-item-text strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-item-text small {
+  overflow: hidden;
+  color: #667085;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-check {
+  flex: none;
+  margin-left: auto;
+  color: #24364b;
+  font-weight: 700;
 }
 
 .mode-picker {
   display: grid;
-  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
 .mode-picker button {
-  min-height: 32px;
+  min-height: 34px;
   border: 1px solid #cfd6e2;
   border-radius: 7px;
   background: #ffffff;
@@ -137,7 +192,7 @@ h1 {
   font-size: 12px;
   font-weight: 700;
   padding: 7px 10px;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -145,26 +200,6 @@ h1 {
   border-color: #24364b;
   background: #24364b;
   color: #ffffff;
-}
-
-.proxy-summary {
-  display: grid;
-  gap: 5px;
-  margin-top: 12px;
-  border: 1px solid #e3e8ef;
-  border-radius: 8px;
-  background: #fafbfc;
-  padding: 12px;
-}
-
-.proxy-summary span {
-  color: #667085;
-  font-size: 12px;
-}
-
-.proxy-summary strong {
-  overflow-wrap: anywhere;
-  font-size: 14px;
 }
 
 button:disabled {

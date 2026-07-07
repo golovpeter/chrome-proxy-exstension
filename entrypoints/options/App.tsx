@@ -361,12 +361,10 @@ export function App() {
     }
   }
 
-  const activeProfile = profilesState?.profiles.find((profile) => profile.id === profilesState.activeProfileId) ?? null;
   const settings = selectedProfile?.settings;
   const activeEndpoint = settings?.proxies[settings.activeMode];
   const hasActiveProxy = Boolean(activeEndpoint?.host && activeEndpoint.port);
   const canDeleteProfile = Boolean(profilesState && profilesState.profiles.length > 1 && selectedProfile);
-  const isSelectedActive = Boolean(profilesState && selectedProfile?.id === profilesState.activeProfileId);
 
   return (
     <div className="app-shell">
@@ -403,39 +401,39 @@ export function App() {
             />
 
             <section className="profile-card" aria-label="Profile management">
-              <div className="profile-row">
-                <label className="field">
-                  <span>Selected profile</span>
-                  <select
-                    value={selectedProfile.id}
+              <div className="profile-switcher" role="group" aria-label="Profiles">
+                {profilesState?.profiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    className={`profile-chip${profile.id === selectedProfile.id ? ' selected' : ''}`}
+                    aria-pressed={profile.id === selectedProfile.id}
                     disabled={busy}
-                    onChange={(event) => void selectProfile(event.target.value)}
+                    onClick={() => void selectProfile(profile.id)}
                   >
-                    {profilesState?.profiles.map((profile) => (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.name}
-                        {profile.id === profilesState.activeProfileId ? ' (active)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <small>{isSelectedActive ? 'Active in Chrome' : `Active: ${activeProfile?.name ?? 'Unknown'}`}</small>
-                </label>
+                    <span className={`profile-dot${profile.settings.enabled ? ' on' : ''}`} aria-hidden />
+                    {profile.name}
+                  </button>
+                ))}
+                <button type="button" className="profile-chip profile-chip-add" disabled={busy} onClick={() => void createProfile()}>
+                  + New profile
+                </button>
+              </div>
+              <p className="profile-hint">Switching a profile applies it in Chrome right away. The dot shows whether the profile enables its proxy.</p>
+              <div className="profile-row">
                 <Field
                   label="Profile name"
                   value={selectedProfile.name}
                   onChange={(event) => updateSelectedProfile((profile) => ({ ...profile, name: event.target.value }))}
                 />
-              </div>
-              <div className="actions profile-actions">
-                <Button disabled={busy} onClick={() => void createProfile()}>
-                  Add
-                </Button>
-                <Button disabled={busy || !selectedProfile} onClick={() => void duplicateProfile()}>
-                  Duplicate
-                </Button>
-                <Button variant="danger" disabled={busy || !canDeleteProfile} onClick={() => void deleteProfile()}>
-                  Delete
-                </Button>
+                <div className="actions profile-actions">
+                  <Button disabled={busy || !selectedProfile} onClick={() => void duplicateProfile()}>
+                    Duplicate
+                  </Button>
+                  <Button variant="danger" disabled={busy || !canDeleteProfile} onClick={() => void deleteProfile()}>
+                    Delete
+                  </Button>
+                </div>
               </div>
             </section>
 

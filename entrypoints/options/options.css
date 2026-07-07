@@ -115,11 +115,16 @@ textarea {
   color: #667085;
 }
 
-.control-grid,
 .form-grid,
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
 }
 
@@ -200,12 +205,11 @@ textarea {
   border-radius: 8px;
   background: #ffffff;
   padding: 3px;
-  overflow-x: auto;
 }
 
 .segmented-control button {
-  flex: 1 0 max-content;
-  min-width: 86px;
+  flex: 1 1 0;
+  min-width: 0;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -263,14 +267,91 @@ textarea {
   padding: 16px;
 }
 
+.profile-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid #cfd6e2;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #344054;
+  cursor: pointer;
+  padding: 8px 15px;
+  font-weight: 650;
+}
+
+.profile-chip:hover:not(:disabled):not(.selected) {
+  border-color: #9aa8bf;
+  background: #f7f9fc;
+}
+
+.profile-chip.selected {
+  border-color: #24364b;
+  background: #24364b;
+  color: #ffffff;
+}
+
+.profile-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.profile-chip-add {
+  border-style: dashed;
+  border-color: #9aa8bf;
+  background: transparent;
+  color: #5a6a85;
+  font-weight: 500;
+}
+
+.profile-chip-add:hover:not(:disabled) {
+  border-style: solid;
+  background: #f2f5f9;
+  color: #24364b;
+}
+
+.profile-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd3e1;
+}
+
+.profile-dot.on {
+  background: #12b76a;
+}
+
+.profile-chip.selected .profile-dot {
+  background: #5a6a85;
+}
+
+.profile-chip.selected .profile-dot.on {
+  background: #3ccb7f;
+}
+
+.profile-hint {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+}
+
 .profile-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+  grid-template-columns: minmax(220px, 1fr) auto;
   gap: 16px;
+  align-items: start;
 }
 
 .profile-actions {
-  margin-top: 0;
+  margin-top: 27px;
 }
 
 .button {
@@ -360,6 +441,10 @@ textarea {
   .profile-row,
   .proxy-card {
     grid-template-columns: 1fr;
+  }
+
+  .profile-actions {
+    margin-top: 0;
   }
 }
 

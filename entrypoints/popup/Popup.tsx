@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ActiveProxyMode, ProxyProfile, ProxyProfilesState } from '../../src/core/settings';
 import { sendRuntimeMessage, type ExtensionState } from '../../src/platform/messages';
 
@@ -17,19 +17,6 @@ export function Popup() {
   useEffect(() => {
     void loadState();
   }, []);
-
-  const currentProxy = useMemo(() => {
-    if (!activeProfile) {
-      return 'No profile loaded';
-    }
-
-    if (!activeProfile.settings.enabled) {
-      return 'Proxy disabled';
-    }
-
-    const endpoint = activeProfile.settings.proxies[activeProfile.settings.activeMode];
-    return endpoint.host && endpoint.port ? `${endpoint.host}:${endpoint.port}` : 'Proxy not configured';
-  }, [activeProfile]);
 
   async function loadState() {
     const response = await sendRuntimeMessage<ExtensionState>({ type: 'GET_STATE' });
@@ -120,44 +107,61 @@ export function Popup() {
 
       {error ? <div className="notice">{error}</div> : null}
 
-      <label className="profile-select">
-        <span>Profile</span>
-        <select
-          value={activeProfile?.id ?? ''}
-          disabled={busy || !profilesState}
-          onChange={(event) => void selectProfile(event.target.value)}
-        >
-          {profilesState?.profiles.map((profile) => (
-            <option key={profile.id} value={profile.id}>
-              {profile.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <section className="profile-list" aria-label="Profiles">
+        <span className="popup-label">Profiles</span>
+        {profilesState?.profiles.map((profile) => {
+          const isActive = profile.id === activeProfile?.id;
+          const endpoint = profile.settings.proxies[profile.settings.activeMode];
+          const summary = !profile.settings.enabled
+            ? 'Proxy off'
+            : endpoint.host && endpoint.port
+              ? `${endpoint.host}:${endpoint.port}`
+              : 'Not configured';
+
+          return (
+            <button
+              key={profile.id}
+              type="button"
+              aria-pressed={isActive}
+              disabled={busy}
+              onClick={() => void selectProfile(profile.id)}
+            >
+              <span className={`profile-dot${profile.settings.enabled ? ' on' : ''}`} aria-hidden />
+              <span className="profile-item-text">
+                <strong>{profile.name}</strong>
+                <small>{summary}</small>
+              </span>
+              {isActive ? (
+                <span className="profile-check" aria-hidden>
+                  ✓
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </section>
 
       <section className="mode-picker" aria-label="Active proxy mode">
-        {modes.map((mode) => (
-          <button
-            key={mode.value}
-            type="button"
-            aria-pressed={enabled && activeProfile?.settings.activeMode === mode.value}
-            disabled={busy || !activeProfile}
-            onClick={() => void selectMode(mode.value)}
-          >
-            {mode.label}
+        <span className="popup-label">Mode</span>
+        <div className="mode-grid">
+          {modes.map((mode) => (
+            <button
+              key={mode.value}
+              type="button"
+              aria-pressed={enabled && activeProfile?.settings.activeMode === mode.value}
+              disabled={busy || !activeProfile}
+              onClick={() => void selectMode(mode.value)}
+            >
+              {mode.label}
+            </button>
+          ))}
+          <button type="button" aria-pressed={!enabled} disabled={busy || !activeProfile} onClick={() => void disableProxy()}>
+            Off
           </button>
-        ))}
-        <button type="button" aria-pressed={!enabled} disabled={busy || !activeProfile} onClick={() => void disableProxy()}>
-          Disabled
-        </button>
+        </div>
         <button type="button" className="dashboard-link" onClick={openDashboard}>
           Settings
         </button>
-      </section>
-
-      <section className="proxy-summary">
-        <span>{activeProfile?.name ?? 'Current profile'}</span>
-        <strong>{currentProxy}</strong>
       </section>
     </main>
   );
