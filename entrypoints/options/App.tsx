@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { parseBypassRules } from '../../src/core/bypassRules';
+import { expandBypassRulesForChrome, parseBypassRules } from '../../src/core/bypassRules';
 import { exportProfilesState, importProfilesState } from '../../src/core/importExport';
 import {
   DEFAULT_SETTINGS,
@@ -504,11 +504,13 @@ export function App() {
               rows={7}
               onChange={(event) => updateProfileSettings({ bypassListRaw: event.target.value })}
               error={errorsByField.get('bypassListRaw')}
-              hint="Comma-separated. Examples: <local>, 192.168.0.0/16, *.example.com, example.com:99"
+              hint="Comma-separated. Examples: <local>, 192.168.0.0/16, *.example.com, example.com:99. A bare domain like example.com also covers its subdomains."
             />
             <div className="preview-box">
               <strong>Normalized preview</strong>
-              <code>{bypassPreview.rules.length ? bypassPreview.rules.join(', ') : 'No valid rules yet'}</code>
+              <code>
+                {bypassPreview.rules.length ? expandBypassRulesForChrome(bypassPreview.rules).join(', ') : 'No valid rules yet'}
+              </code>
             </div>
             <div className="actions">
               <Button variant="primary" disabled={busy || !validation.valid} onClick={() => void saveSelectedProfile()}>

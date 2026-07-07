@@ -1,3 +1,4 @@
+import { expandBypassRulesForChrome } from './bypassRules';
 import type { ActiveProxyMode, ProxyEndpoint, ProxySettings, SocksVersion } from './settings';
 
 export type ProxyScheme = 'http' | 'https' | 'socks4' | 'socks5';
@@ -38,7 +39,7 @@ export function buildProxyConfig(settings: ProxySettings): FixedProxyConfig | nu
         };
 
   if (settings.bypassList.length > 0) {
-    rules.bypassList = settings.bypassList;
+    rules.bypassList = expandBypassRulesForChrome(settings.bypassList);
   }
 
   return {

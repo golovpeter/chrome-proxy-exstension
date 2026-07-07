@@ -30,6 +30,42 @@ export function parseBypassRules(raw: string): ParsedBypassRules {
   return { rules, errors };
 }
 
+export function expandBypassRulesForChrome(rules: string[]): string[] {
+  const existing = new Set(rules);
+  const expanded: string[] = [];
+
+  for (const rule of rules) {
+    expanded.push(rule);
+
+    const wildcardTwin = bareDomainToWildcard(rule);
+    if (wildcardTwin && !existing.has(wildcardTwin)) {
+      existing.add(wildcardTwin);
+      expanded.push(wildcardTwin);
+    }
+  }
+
+  return expanded;
+}
+
+function bareDomainToWildcard(rule: string): string | null {
+  if (rule === '<local>' || rule.includes('*') || rule.includes('/')) {
+    return null;
+  }
+
+  const portResult = splitOptionalPort(rule);
+  if (!portResult.valid) {
+    return null;
+  }
+
+  const host = portResult.host;
+  if (host.includes(':') || isValidIpv4(host) || !host.includes('.') || !isValidDomain(host)) {
+    return null;
+  }
+
+  const port = rule.length > host.length ? rule.slice(host.length) : '';
+  return `*.${host}${port}`;
+}
+
 function validateBypassRule(value: string): string | null {
   if (value === '<local>') {
     return null;

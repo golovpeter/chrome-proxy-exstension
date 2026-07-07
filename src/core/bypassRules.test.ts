@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBypassRules } from './bypassRules';
+import { expandBypassRulesForChrome, parseBypassRules } from './bypassRules';
 
 describe('parseBypassRules', () => {
   it('splits comma separated rules and trims empty entries', () => {
@@ -27,5 +27,29 @@ describe('parseBypassRules', () => {
       '192.168.0.0/99',
       'example.com:70000',
     ]);
+  });
+});
+
+describe('expandBypassRulesForChrome', () => {
+  it('adds a wildcard twin for bare domains so subdomains bypass too', () => {
+    expect(expandBypassRulesForChrome(['example.com'])).toEqual(['example.com', '*.example.com']);
+  });
+
+  it('expands host:port rules with the port preserved', () => {
+    expect(expandBypassRulesForChrome(['example.com:8080'])).toEqual(['example.com:8080', '*.example.com:8080']);
+  });
+
+  it('keeps local token, wildcards, IPs, and CIDR ranges untouched', () => {
+    expect(expandBypassRulesForChrome(['<local>', '*.example.com', '10.0.0.1', '192.168.0.0/16', '::1'])).toEqual([
+      '<local>',
+      '*.example.com',
+      '10.0.0.1',
+      '192.168.0.0/16',
+      '::1',
+    ]);
+  });
+
+  it('does not duplicate a wildcard the user already listed', () => {
+    expect(expandBypassRulesForChrome(['example.com', '*.example.com'])).toEqual(['example.com', '*.example.com']);
   });
 });
