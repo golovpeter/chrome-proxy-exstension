@@ -103,8 +103,9 @@ h1 {
   display: grid;
   gap: 6px;
   margin-bottom: 14px;
-  max-height: 208px;
+  max-height: 244px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .profile-list button {

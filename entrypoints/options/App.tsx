@@ -412,7 +412,9 @@ export function App() {
                     onClick={() => void selectProfile(profile.id)}
                   >
                     <span className={`profile-dot${profile.settings.enabled ? ' on' : ''}`} aria-hidden />
-                    {profile.name}
+                    <span className="profile-chip-name" title={profile.name}>
+                      {profile.name}
+                    </span>
                   </button>
                 ))}
                 <button type="button" className="profile-chip profile-chip-add" disabled={busy} onClick={() => void createProfile()}>
@@ -424,6 +426,7 @@ export function App() {
                 <Field
                   label="Profile name"
                   value={selectedProfile.name}
+                  maxLength={64}
                   onChange={(event) => updateSelectedProfile((profile) => ({ ...profile, name: event.target.value }))}
                 />
                 <div className="actions profile-actions">

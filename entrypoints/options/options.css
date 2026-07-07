@@ -278,6 +278,7 @@ textarea {
   align-items: center;
   gap: 8px;
   min-height: 38px;
+  max-width: 240px;
   border: 1px solid #cfd6e2;
   border-radius: 999px;
   background: #ffffff;
@@ -285,6 +286,13 @@ textarea {
   cursor: pointer;
   padding: 8px 15px;
   font-weight: 650;
+}
+
+.profile-chip-name {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-chip:hover:not(:disabled):not(.selected) {

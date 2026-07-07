@@ -18,6 +18,10 @@ export function Popup() {
     void loadState();
   }, []);
 
+  useEffect(() => {
+    document.querySelector('.profile-list button[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [activeProfile?.id]);
+
   async function loadState() {
     const response = await sendRuntimeMessage<ExtensionState>({ type: 'GET_STATE' });
 
@@ -128,8 +132,8 @@ export function Popup() {
             >
               <span className={`profile-dot${profile.settings.enabled ? ' on' : ''}`} aria-hidden />
               <span className="profile-item-text">
-                <strong>{profile.name}</strong>
-                <small>{summary}</small>
+                <strong title={profile.name}>{profile.name}</strong>
+                <small title={summary}>{summary}</small>
               </span>
               {isActive ? (
                 <span className="profile-check" aria-hidden>
