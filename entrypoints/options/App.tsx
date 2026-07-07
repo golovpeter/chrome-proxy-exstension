@@ -3,7 +3,6 @@ import { parseBypassRules } from '../../src/core/bypassRules';
 import { exportProfilesState, importProfilesState } from '../../src/core/importExport';
 import {
   DEFAULT_SETTINGS,
-  normalizeProfilesState,
   type ActiveProxyMode,
   type ProxyProfile,
   type ProxyProfilesState,
@@ -71,10 +70,9 @@ export function App() {
   }
 
   function updateProfilesState(nextState: ProxyProfilesState) {
-    const normalized = normalizeProfilesState(nextState);
-    setProfilesState(normalized);
+    setProfilesState(nextState);
     setSelectedProfileId((current) =>
-      normalized.profiles.some((profile) => profile.id === current) ? current : normalized.activeProfileId,
+      nextState.profiles.some((profile) => profile.id === current) ? current : nextState.activeProfileId,
     );
   }
 
@@ -137,7 +135,8 @@ export function App() {
 
     if (response.ok) {
       applyExtensionState(response.data);
-      setStatus({ tone: 'success', message: options.successMessage ?? `${profileToSave.name} saved.` });
+      const savedName = response.data.profilesState.profiles.find((profile) => profile.id === profileToSave.id)?.name ?? profileToSave.name;
+      setStatus({ tone: 'success', message: `${savedName} ${options.successMessage ?? 'saved.'}` });
     } else {
       setStatus({ tone: 'error', message: response.error });
     }
@@ -413,7 +412,7 @@ export function App() {
                   >
                     <span className={`profile-dot${profile.settings.enabled ? ' on' : ''}`} aria-hidden />
                     <span className="profile-chip-name" title={profile.name}>
-                      {profile.name}
+                      {profile.name.trim() || 'Untitled Profile'}
                     </span>
                   </button>
                 ))}
@@ -479,7 +478,7 @@ export function App() {
               <Button
                 variant="primary"
                 disabled={busy || !validateProfileSettings({ ...settings, enabled: true }).valid}
-                onClick={() => void saveSelectedProfile({ enable: true, successMessage: `${selectedProfile.name} saved and enabled.` })}
+                onClick={() => void saveSelectedProfile({ enable: true, successMessage: 'saved and enabled.' })}
               >
                 Save
               </Button>
@@ -549,7 +548,7 @@ export function App() {
               />
             </div>
             <div className="actions">
-              <Button variant="primary" disabled={busy} onClick={() => void saveSelectedProfile({ successMessage: `${selectedProfile.name} credentials saved.` })}>
+              <Button variant="primary" disabled={busy} onClick={() => void saveSelectedProfile({ successMessage: 'credentials saved.' })}>
                 Save Credentials
               </Button>
               <Button variant="danger" disabled={busy} onClick={() => void clearCredentials()}>
