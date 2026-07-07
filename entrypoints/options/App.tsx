@@ -614,8 +614,8 @@ function ProxyFields({
   const endpoint = profile.settings.proxies[mode];
   const hostValidation = validateHost(endpoint.host);
   const portValidation = validatePort(endpoint.port);
-  const hostError = hostValidation.valid ? errors.get(`proxies.${mode}.host`) : hostValidation.message;
-  const portError = portValidation.valid ? errors.get(`proxies.${mode}.port`) : portValidation.message;
+  const hostError = endpoint.host && !hostValidation.valid ? hostValidation.message : errors.get(`proxies.${mode}.host`);
+  const portError = endpoint.port && !portValidation.valid ? portValidation.message : errors.get(`proxies.${mode}.port`);
 
   return (
     <section className="proxy-card">

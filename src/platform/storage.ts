@@ -34,6 +34,7 @@ export async function loadProfilesState(): Promise<ProxyProfilesState> {
 
   const migratedState = await migrateLegacyState();
   await saveProfilesState(migratedState);
+  await storageRemove([SETTINGS_KEY, CREDENTIALS_KEY]);
   return migratedState;
 }
 
@@ -175,6 +176,21 @@ function storageGet<T>(keys: string | string[]): Promise<T> {
       }
 
       resolve(items as T);
+    });
+  });
+}
+
+function storageRemove(keys: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.remove(keys, () => {
+      const error = chrome.runtime.lastError;
+
+      if (error) {
+        reject(new Error(error.message));
+        return;
+      }
+
+      resolve();
     });
   });
 }

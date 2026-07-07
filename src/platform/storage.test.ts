@@ -21,6 +21,13 @@ beforeEach(() => {
           Object.assign(store, items);
           callback();
         },
+        remove: (keys: string | string[], callback: () => void) => {
+          const keyList = Array.isArray(keys) ? keys : [keys];
+          for (const key of keyList) {
+            delete store[key];
+          }
+          callback();
+        },
       },
     },
   });
@@ -76,5 +83,7 @@ describe('profile storage', () => {
     expect(state.profiles[0]!.settings.proxies.http.host).toBe('proxy.example.com');
     expect(state.profiles[0]!.credentials).toEqual({ username: 'legacy-user', password: 'legacy-pass' });
     expect(store.proxyProfilesState).toEqual(state);
+    expect(store.proxySettings).toBeUndefined();
+    expect(store.proxyCredentials).toBeUndefined();
   });
 });
